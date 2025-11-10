@@ -1,10 +1,87 @@
 {% extends 'base.html' %}
+{% load static %}
 {% block content %}
-<h2>{{ profile.user.get_full_name }}'s Dashboard</h2>
-<p>Student ID: {{ profile.student_code }}</p>
 
-<canvas id="hrChart" width="600" height="200"></canvas>
+<div class="student-dashboard d-flex align-items-center justify-content-center py-5">
+  <div class="container animate-fade-in">
 
+    <!-- 👩‍🎓 Header -->
+    <div class="card shadow-lg p-4 rounded-4 bg-white mb-4 text-center">
+      <h2 class="fw-bold text-gradient mb-2">{{ profile.user.get_full_name }}'s Dashboard</h2>
+      <p class="text-muted mb-0">🎓 Student ID: <strong>{{ profile.student_code }}</strong></p>
+    </div>
+
+    <!-- 💓 Health Summary -->
+    <div class="row g-4 mb-4">
+      <div class="col-md-4">
+        <div class="summary-card shadow-sm rounded-4 text-center py-4">
+          <h5 class="text-muted">Heart Rate</h5>
+          <h3 class="fw-bold text-danger">{{ latest_vital.heart_rate|default:"--" }} <small>bpm</small></h3>
+        </div>
+      </div>
+      <div class="col-md-4">
+        <div class="summary-card shadow-sm rounded-4 text-center py-4">
+          <h5 class="text-muted">SpO₂</h5>
+          <h3 class="fw-bold text-success">{{ latest_vital.spo2|default:"--" }} <small>%</small></h3>
+        </div>
+      </div>
+      <div class="col-md-4">
+        <div class="summary-card shadow-sm rounded-4 text-center py-4">
+          <h5 class="text-muted">Temperature</h5>
+          <h3 class="fw-bold text-primary">{{ latest_vital.temperature_c|default:"--" }} <small>°C</small></h3>
+        </div>
+      </div>
+    </div>
+
+    <!-- 📊 Health Trends -->
+    <div class="card shadow-lg p-4 rounded-4 mb-4">
+      <h4 class="fw-semibold mb-3 text-gradient">📈 Health Progress</h4>
+      <canvas id="hrChart" height="200"></canvas>
+    </div>
+
+    <!-- 📋 Recent Records -->
+    <div class="card shadow-lg p-4 rounded-4 bg-white mb-4">
+      <h4 class="fw-semibold mb-3 text-gradient">🩺 Recent Health Records</h4>
+      {% if vitals %}
+      <div class="table-responsive">
+        <table class="table table-hover text-center align-middle">
+          <thead class="table-dark">
+            <tr>
+              <th>Date</th>
+              <th>Heart Rate</th>
+              <th>SpO₂</th>
+              <th>Temperature</th>
+              <th>Prediction</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for v in vitals %}
+            <tr>
+              <td>{{ v.recorded_at|date:"M d, H:i" }}</td>
+              <td>{{ v.heart_rate }}</td>
+              <td>{{ v.spo2 }}</td>
+              <td>{{ v.temperature_c }}</td>
+              <td>{{ v.prediction_score }} ({{ v.prediction_label }})</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <p class="text-muted fst-italic">No records available yet.</p>
+      {% endif %}
+    </div>
+
+    <!-- ➕ Add Vitals -->
+    <div class="text-center">
+      <a href="{% url 'add_vital' %}" class="btn btn-success rounded-pill px-4 py-2 shadow-sm">➕ Add New Vitals</a>
+    </div>
+
+  </div>
+</div>
+
+<!-- 📊 Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
 const labels = {{ labels|safe }};
 const hrData = {{ hr_data|safe }};
@@ -16,22 +93,84 @@ new Chart(document.getElementById('hrChart'), {
   data: {
     labels: labels,
     datasets: [
-      { label: 'Heart Rate', data: hrData, fill: false },
-      { label: 'SpO2', data: spo2Data, fill: false },
-      { label: 'Temp', data: tempData, fill: false }
+      {
+        label: 'Heart Rate (bpm)',
+        data: hrData,
+        borderColor: '#dc3545',
+        backgroundColor: 'rgba(220,53,69,0.1)',
+        fill: true,
+        tension: 0.4
+      },
+      {
+        label: 'SpO₂ (%)',
+        data: spo2Data,
+        borderColor: '#28a745',
+        backgroundColor: 'rgba(40,167,69,0.1)',
+        fill: true,
+        tension: 0.4
+      },
+      {
+        label: 'Temperature (°C)',
+        data: tempData,
+        borderColor: '#007bff',
+        backgroundColor: 'rgba(0,123,255,0.1)',
+        fill: true,
+        tension: 0.4
+      }
     ]
   },
-  options: {}
+  options: {
+    responsive: true,
+    plugins: { legend: { position: 'top' } },
+    scales: {
+      x: { title: { display: true, text: 'Recorded Time' } },
+      y: { title: { display: true, text: 'Values' } }
+    }
+  }
 });
 </script>
 
-<h3>Recent Records</h3>
-<ul>
-  {% for v in vitals %}
-    <li>{{ v.recorded_at }} - HR: {{ v.heart_rate }}, SpO2: {{ v.spo2 }}, Temp: {{ v.temperature_c }}, Prediction: {{ v.prediction_score }} ({{ v.prediction_label }})</li>
-  {% empty %}
-    <li>No records yet</li>
-  {% endfor %}
-</ul>
-<a href="{% url 'add_vital' %}">Add Vitals</a>
+<!-- 🌈 Styling -->
+<style>
+.student-dashboard {
+  background: linear-gradient(-45deg, #007bff, #00c6ff, #17a2b8, #6f42c1);
+  background-size: 400% 400%;
+  animation: gradientFlow 15s ease infinite;
+  min-height: calc(100vh - 60px);
+}
+
+.text-gradient {
+  background: linear-gradient(90deg, #007bff, #00c6ff);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.summary-card {
+  background: #ffffffdd;
+  border: 1px solid #eee;
+  backdrop-filter: blur(10px);
+  transition: all 0.3s ease;
+}
+.summary-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+}
+
+.animate-fade-in {
+  opacity: 0;
+  transform: translateY(10px);
+  animation: fadeInUp 1s ease forwards;
+}
+
+@keyframes fadeInUp {
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes gradientFlow {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+</style>
+
 {% endblock %}

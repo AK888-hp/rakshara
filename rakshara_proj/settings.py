@@ -134,3 +134,11 @@ LOGIN_REDIRECT_URL = 'home'     # or 'teacher_dashboard' / 'student_dashboard'
 LOGOUT_REDIRECT_URL = 'login'
 
 LOGIN_URL = 'login'
+# Email Settings for Google SMTP
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = 'smtp.gmail.com'
+EMAIL_PORT = 587
+EMAIL_USE_TLS = True
+EMAIL_HOST_USER = 'medteknie@gmail.com'  # replace
+EMAIL_HOST_PASSWORD = 'wxmkanbvfdocvdxc'  # Google App Password
+DEFAULT_FROM_EMAIL = EMAIL_HOST_USER

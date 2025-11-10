@@ -1,0 +1,99 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="otp-container d-flex align-items-center justify-content-center">
+  <div class="otp-card p-4 p-md-5 shadow-lg rounded-4 bg-white text-center animate-fade-in">
+    <h2 class="fw-bold text-gradient mb-3">🔐 Verify OTP</h2>
+    <p class="text-muted mb-4">A 6-digit verification code has been sent to your email: <br><strong>{{ email }}</strong></p>
+
+    <form method="post" class="text-center">
+      {% csrf_token %}
+      <div class="otp-input-group d-flex justify-content-center gap-2 mb-3">
+        <input type="text" name="otp" maxlength="6" inputmode="numeric"
+               class="form-control form-control-lg text-center otp-input"
+               placeholder="------" required>
+      </div>
+
+      <button type="submit" class="btn btn-success w-100 rounded-pill py-2 mt-2 shadow-sm">
+        ✅ Verify & Continue
+      </button>
+    </form>
+
+    {% if messages %}
+    <div class="mt-3">
+      {% for message in messages %}
+        <div class="alert alert-{{ message.tags }} py-2 rounded-pill small shadow-sm text-center">
+          {{ message }}
+        </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    <hr class="my-4">
+    <p class="text-muted small">Didn’t receive the OTP?</p>
+    <a href="#" class="btn btn-outline-primary rounded-pill px-4 small">🔁 Resend OTP</a>
+  </div>
+</div>
+
+<style>
+/* 🌈 Animated Gradient Background */
+.otp-container {
+  height: calc(100vh - 120px);
+  background: linear-gradient(-45deg, #007bff, #00c6ff, #6f42c1, #17a2b8);
+  background-size: 400% 400%;
+  animation: gradientShift 10s ease infinite;
+}
+
+@keyframes gradientShift {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+/* 💎 Card Style */
+.otp-card {
+  width: 100%;
+  max-width: 450px;
+  background: #ffffffee;
+  backdrop-filter: blur(12px);
+}
+
+.text-gradient {
+  background: linear-gradient(90deg, #007bff, #00c6ff);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+/* 🎯 OTP Input Styling */
+.otp-input {
+  letter-spacing: 8px;
+  font-size: 28px;
+  max-width: 200px;
+  border-radius: 40px;
+  border: 1.5px solid #ccc;
+  transition: all 0.3s ease;
+}
+.otp-input:focus {
+  border-color: #007bff;
+  box-shadow: 0 0 10px rgba(0,123,255,0.3);
+}
+
+/* ✨ Animations */
+.animate-fade-in {
+  opacity: 0;
+  transform: translateY(20px);
+  animation: fadeInUp 0.9s ease forwards;
+}
+@keyframes fadeInUp {
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Buttons */
+.btn {
+  transition: all 0.3s ease;
+}
+.btn:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 15px rgba(0, 0, 0, 0.15);
+}
+</style>
+{% endblock %}

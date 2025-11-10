@@ -1,24 +1,36 @@
 {% extends 'base.html' %}
 {% load static %}
-
 {% block content %}
-<div class="container mt-5">
-  <div class="card shadow-lg p-4 rounded-4">
-    <h2 class="text-center mb-4 text-primary">
-      {{ vc.class_name }} - {{ vc.section }} ({{ vc.school.name }})
-    </h2>
 
-    <div class="d-flex justify-content-between mb-3">
-      <h5>Total Students: {{ students.count }}</h5>
-      <a href="{% url 'quick_checkup' vc.id %}" class="btn btn-warning">
+<div class="classroom-container d-flex align-items-center justify-content-center py-5">
+  <div class="classroom-card container p-4 p-md-5 rounded-4 shadow-lg bg-white animate-fade-in">
+    
+    <div class="text-center mb-4">
+      <h2 class="fw-bold text-gradient">
+        🏫 {{ vc.class_name }} - {{ vc.section|upper }}
+      </h2>
+      <p class="text-muted mb-1">{{ vc.school.name }}</p>
+    </div>
+
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-center mb-4">
+      <h5 class="mb-3 mb-md-0 fw-semibold text-dark">
+        👩‍🎓 Total Students: <span class="text-primary">{{ students.count }}</span>
+      </h5>
+      <a href="{% url 'quick_checkup' vc.id %}" class="btn btn-warning rounded-pill px-4 py-2 shadow-sm fw-semibold">
         🩺 Start Quick Checkup
       </a>
     </div>
 
+    <!-- 🔍 Search Field -->
+    <div class="input-group mb-4">
+      <span class="input-group-text bg-primary text-white">🔍</span>
+      <input type="text" id="studentSearch" class="form-control rounded-end" placeholder="Search by student name or roll number...">
+    </div>
+
     {% if students %}
-    <div class="table-responsive">
-      <table class="table table-bordered table-hover text-center align-middle">
-        <thead class="table-dark">
+    <div class="table-responsive rounded-3 shadow-sm">
+      <table class="table table-hover align-middle text-center mb-0">
+        <thead class="table-primary text-dark">
           <tr>
             <th>Roll No</th>
             <th>Name</th>
@@ -30,9 +42,9 @@
             <th>Address</th>
           </tr>
         </thead>
-        <tbody>
+        <tbody id="studentTable">
           {% for s in students %}
-          <tr>
+          <tr class="student-row">
             <td>{{ s.roll_no }}</td>
             <td>{{ s.user.first_name }} {{ s.user.last_name }}</td>
             <td>{{ s.class_name }}</td>
@@ -51,4 +63,68 @@
     {% endif %}
   </div>
 </div>
+
+<!-- 🌈 Styling -->
+<style>
+.classroom-container {
+  min-height: calc(100vh - 120px);
+  background: linear-gradient(-45deg, #007bff, #00c6ff, #17a2b8, #6f42c1);
+  background-size: 400% 400%;
+  animation: gradientShift 15s ease infinite;
+}
+
+.classroom-card {
+  background: #ffffffee;
+  backdrop-filter: blur(10px);
+}
+
+.text-gradient {
+  background: linear-gradient(90deg, #007bff, #00c6ff);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.table {
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.table-hover tbody tr:hover {
+  background-color: rgba(0, 123, 255, 0.05);
+  transition: background-color 0.3s ease;
+}
+
+.animate-fade-in {
+  opacity: 0;
+  transform: translateY(15px);
+  animation: fadeInUp 1s ease forwards;
+}
+
+@keyframes gradientShift {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+@keyframes fadeInUp {
+  to { opacity: 1; transform: translateY(0); }
+}
+
+input.form-control:focus {
+  border-color: #007bff;
+  box-shadow: 0 0 8px rgba(0,123,255,0.3);
+}
+</style>
+
+<!-- 🔎 Live Search Script -->
+<script>
+document.getElementById("studentSearch").addEventListener("keyup", function() {
+  const filter = this.value.toLowerCase();
+  document.querySelectorAll(".student-row").forEach(row => {
+    const text = row.innerText.toLowerCase();
+    row.style.display = text.includes(filter) ? "" : "none";
+  });
+});
+</script>
+
 {% endblock %}

@@ -1,12 +1,133 @@
 {% extends 'base.html' %}
 {% block content %}
-<h2>Teacher Registration</h2>
+<div class="register-container d-flex align-items-center justify-content-center">
+  <div class="register-card p-4 p-md-5 shadow-lg rounded-4 bg-white text-center animate-fade-in">
+    <h2 class="fw-bold text-gradient mb-3">🧑‍🏫 Teacher Registration</h2>
+    <p class="text-muted mb-4">Join <strong>Rakshara</strong> and manage your classroom health insights.</p>
 
-<form method="post">
-  {% csrf_token %}
-  {{ form.as_p }}
-  <button type="submit">Register</button>
-</form>
+    <form method="post" class="text-start">
+      {% csrf_token %}
+      <div class="form-fields">
+        {{ form.as_p }}
+      </div>
 
-<p>Already have an account? <a href="{% url 'login' %}">Login here</a>.</p>
+      <button type="submit" class="btn btn-primary w-100 rounded-pill py-2 mt-3 shadow-sm">
+        🚀 Register
+      </button>
+    </form>
+
+    {% if messages %}
+    <div class="mt-3">
+      {% for message in messages %}
+      <div class="alert alert-{{ message.tags }} py-2 rounded-pill small shadow-sm text-center">{{ message }}</div>
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    <div class="mt-4">
+      <p class="text-muted mb-1">Already registered?</p>
+      <a href="{% url 'login' %}" class="btn btn-outline-secondary rounded-pill px-4">🔑 Login Here</a>
+    </div>
+
+    <div class="otp-hint mt-4 small text-muted border-top pt-3">
+      <strong>Note:</strong> After registration, a 6-digit OTP will be sent to your registered email 
+      for verification. Please check your inbox to activate your account.
+    </div>
+  </div>
+</div>
+
+<style>
+/* 🌈 Background Gradient Animation */
+.register-container {
+  min-height: 100vh; /* ✅ allows page to grow */
+  background: linear-gradient(-45deg, #007bff, #00c6ff, #17a2b8, #6f42c1);
+  background-size: 400% 400%;
+  animation: gradientShift 12s ease infinite;
+  overflow-y: auto; /* ✅ enables scrolling for long forms */
+  padding: 60px 0; /* ✅ adds breathing space */
+}
+
+/* 🎨 Card Design */
+.register-card {
+  width: 100%;
+  max-width: 650px;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10px);
+  position: relative;
+  z-index: 2;
+}
+
+/* ✨ Heading Gradient */
+.text-gradient {
+  background: linear-gradient(90deg, #007bff, #00c6ff);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+/* 🎬 Animations */
+@keyframes gradientShift {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+.animate-fade-in {
+  opacity: 0;
+  transform: translateY(20px);
+  animation: fadeInUp 1s ease forwards;
+}
+@keyframes fadeInUp {
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* 🧾 Form Inputs */
+form p {
+  margin-bottom: 1rem;
+}
+
+label {
+  font-weight: 500;
+  color: #333;
+  margin-bottom: 0.3rem;
+}
+
+input, select {
+  width: 100%;
+  border-radius: 50px;
+  border: 1px solid #ccc;
+  padding: 10px 15px;
+  outline: none;
+  transition: all 0.3s ease;
+}
+
+input:focus, select:focus {
+  border-color: #007bff;
+  box-shadow: 0 0 8px rgba(0, 123, 255, 0.2);
+}
+
+/* 🧠 OTP Note */
+.otp-hint {
+  background: rgba(0, 123, 255, 0.05);
+  border-radius: 12px;
+  padding: 10px 15px;
+  font-size: 0.9rem;
+}
+
+/* 🧩 Buttons */
+.btn {
+  transition: all 0.3s ease;
+}
+.btn:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 15px rgba(0, 0, 0, 0.15);
+}
+
+/* 📱 Responsive Adjustments */
+@media (max-width: 768px) {
+  .register-card {
+    max-width: 90%;
+    padding: 2rem 1.5rem;
+  }
+}
+</style>
 {% endblock %}

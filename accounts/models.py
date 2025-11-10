@@ -1,6 +1,7 @@
 from django.db import models
 from django.contrib.auth.models import AbstractUser
 from django.utils import timezone
+import random
 
 
 # ---------------------- School Model ----------------------
@@ -17,12 +18,20 @@ class School(models.Model):
 class User(AbstractUser):
     is_student = models.BooleanField(default=False)
     is_teacher = models.BooleanField(default=False)
-    school = models.ForeignKey(School, on_delete=models.SET_NULL, null=True, blank=True)
+    school = models.ForeignKey('School', on_delete=models.SET_NULL, null=True, blank=True)
 
-    def __str__(self):
-        role = "Student" if self.is_student else "Teacher" if self.is_teacher else "User"
-        return f"{self.username} ({role})"
+    is_verified = models.BooleanField(default=False)  # ✅ new
+    otp = models.CharField(max_length=6, blank=True, null=True)
+    otp_created_at = models.DateTimeField(blank=True, null=True)
 
+    def generate_otp(self):
+        """Generate 6-digit OTP and store it temporarily."""
+        otp = str(random.randint(100000, 999999))
+        self.otp = otp
+        from django.utils import timezone
+        self.otp_created_at = timezone.now()
+        self.save()
+        return otp
 
 # ---------------------- Student Profile ----------------------
 class StudentProfile(models.Model):

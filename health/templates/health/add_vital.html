@@ -1,23 +1,104 @@
 {% extends 'base.html' %}
 {% block content %}
-<h2>Add Health Vitals</h2>
 
-<form method="post">
-    {% csrf_token %}
-    <p><label>Heart Rate (bpm):</label><br>
-    <input type="number" name="heart_rate" step="1" required></p>
+<div class="vitals-container d-flex align-items-center justify-content-center py-5">
+  <div class="vitals-card p-4 p-md-5 rounded-4 shadow-lg bg-white animate-fade-in text-center">
 
-    <p><label>Blood Oxygen Level (SpO₂ %):</label><br>
-    <input type="number" name="spo2" step="0.1" required></p>
+    <!-- 🩺 Header -->
+    <h2 class="fw-bold text-gradient mb-3">🩺 Add Health Vitals</h2>
+    <p class="text-muted mb-4">Enter your latest health data to analyze your wellness status.</p>
 
-    <p><label>Breathing Rate (breaths/min):</label><br>
-    <input type="number" name="breathing_rate" step="0.1" required></p>
+    <!-- 🧾 Form -->
+    <form method="post" class="text-start mx-auto" style="max-width: 480px;">
+      {% csrf_token %}
 
-    <p><label>Temperature (°C):</label><br>
-    <input type="number" name="temperature" step="0.1" required></p>
+      <div class="mb-3">
+        <label class="form-label fw-semibold">💓 Heart Rate (bpm)</label>
+        <input type="number" name="heart_rate" step="1" class="form-control form-control-lg rounded-pill" placeholder="e.g. 75" required>
+      </div>
 
-    <button type="submit">Submit</button>
-</form>
+      <div class="mb-3">
+        <label class="form-label fw-semibold">🫁 Blood Oxygen (SpO₂ %)</label>
+        <input type="number" name="spo2" step="0.1" class="form-control form-control-lg rounded-pill" placeholder="e.g. 98" required>
+      </div>
 
-<p><a href="{% url 'student_dashboard' %}">← Back to Dashboard</a></p>
+      <div class="mb-3">
+        <label class="form-label fw-semibold">🌬️ Breathing Rate (breaths/min)</label>
+        <input type="number" name="breathing_rate" step="0.1" class="form-control form-control-lg rounded-pill" placeholder="e.g. 16" required>
+      </div>
+
+      <div class="mb-4">
+        <label class="form-label fw-semibold">🌡️ Temperature (°C)</label>
+        <input type="number" name="temperature" step="0.1" class="form-control form-control-lg rounded-pill" placeholder="e.g. 36.8" required>
+      </div>
+
+      <button type="submit" class="btn btn-success rounded-pill px-4 py-2 w-100 shadow-sm">✅ Submit</button>
+    </form>
+
+    <div class="mt-4">
+      <a href="{% url 'student_dashboard' %}" class="btn btn-outline-secondary rounded-pill px-4 py-2 shadow-sm">
+        ← Back to Dashboard
+      </a>
+    </div>
+  </div>
+</div>
+
+<!-- 🌈 Styling -->
+<style>
+.vitals-container {
+  min-height: calc(100vh - 120px);
+  background: linear-gradient(-45deg, #007bff, #00c6ff, #17a2b8, #6f42c1);
+  background-size: 400% 400%;
+  animation: gradientShift 15s ease infinite;
+}
+
+.vitals-card {
+  background: #ffffffee;
+  backdrop-filter: blur(10px);
+  width: 100%;
+  max-width: 600px;
+}
+
+.text-gradient {
+  background: linear-gradient(90deg, #007bff, #00c6ff);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.form-control {
+  border-radius: 50px;
+  border: 1.2px solid #ccc;
+  padding: 10px 20px;
+  transition: all 0.3s ease;
+}
+.form-control:focus {
+  border-color: #007bff;
+  box-shadow: 0 0 8px rgba(0,123,255,0.2);
+}
+
+.btn {
+  transition: all 0.3s ease;
+}
+.btn:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 15px rgba(0,0,0,0.1);
+}
+
+.animate-fade-in {
+  opacity: 0;
+  transform: translateY(15px);
+  animation: fadeInUp 1s ease forwards;
+}
+
+@keyframes fadeInUp {
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes gradientShift {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+</style>
+
 {% endblock %}

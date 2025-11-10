@@ -1,11 +1,89 @@
-<form method="post">
-    {% csrf_token %}
-    <h2>Login</h2>
-    <input type="text" name="username" placeholder="Username or Student ID" required>
-    <input type="password" name="password" placeholder="Password" required>
-    <button type="submit">Login</button>
-</form>
+{% extends 'base.html' %}
+{% block content %}
+<div class="login-container d-flex align-items-center justify-content-center">
+  <div class="login-card p-4 p-md-5 shadow-lg rounded-4 bg-white text-center animate-fade-in">
+    <h2 class="fw-bold text-gradient mb-3">Welcome Back 👋</h2>
+    <p class="text-muted mb-4">Login to continue to <strong>Rakshara</strong></p>
 
-{% for message in messages %}
-<p>{{ message }}</p>
-{% endfor %}
+    <form method="post" class="text-start">
+      {% csrf_token %}
+      <div class="mb-3">
+        <label class="form-label fw-semibold">Username or Student ID</label>
+        <input type="text" name="username" class="form-control form-control-lg rounded-pill" placeholder="Enter your username or student ID" required>
+      </div>
+      <div class="mb-3">
+        <label class="form-label fw-semibold">Password</label>
+        <input type="password" name="password" class="form-control form-control-lg rounded-pill" placeholder="Enter your password" required>
+      </div>
+      <button type="submit" class="btn btn-primary w-100 rounded-pill py-2 mt-2 shadow-sm">
+        🔐 Login
+      </button>
+    </form>
+
+    {% if messages %}
+    <div class="mt-3">
+      {% for message in messages %}
+      <div class="alert alert-{{ message.tags }} py-2 rounded-pill small shadow-sm text-center">{{ message }}</div>
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    <hr class="my-4">
+    <p class="mb-1 text-muted">Don’t have an account?</p>
+    <div class="d-flex justify-content-center gap-2 flex-wrap">
+      <a href="{% url 'student_register' %}" class="btn btn-outline-success rounded-pill px-4">🎓 Student Sign Up</a>
+      <a href="{% url 'teacher_register' %}" class="btn btn-outline-info rounded-pill px-4">🧑‍🏫 Teacher Sign Up</a>
+    </div>
+  </div>
+</div>
+
+<style>
+/* 🌈 Background Animation */
+.login-container {
+  height: calc(100vh - 120px);
+  background: linear-gradient(-45deg, #007bff, #00c6ff, #6f42c1, #17a2b8);
+  background-size: 400% 400%;
+  animation: gradientShift 12s ease infinite;
+}
+
+/* 🎨 Gradient Animation Keyframes */
+@keyframes gradientShift {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+/* 💫 Card Styling */
+.login-card {
+  width: 100%;
+  max-width: 420px;
+  background: #ffffffee;
+  backdrop-filter: blur(10px);
+}
+
+.text-gradient {
+  background: linear-gradient(90deg, #007bff, #00c6ff);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+/* ✨ Animation */
+.animate-fade-in {
+  opacity: 0;
+  transform: translateY(15px);
+  animation: fadeInUp 0.9s ease forwards;
+}
+@keyframes fadeInUp {
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Buttons */
+.btn {
+  transition: all 0.3s ease;
+}
+.btn:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 6px 15px rgba(0, 0, 0, 0.15);
+}
+</style>
+{% endblock %}

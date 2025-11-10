@@ -5,6 +5,13 @@ from .forms import StudentSignUpForm, TeacherSignUpForm
 from .models import School, StudentProfile, User, TeacherProfile, Notification, JoinRequest
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth import logout as django_logout
+from .utils import send_teacher_otp_email
+from django.utils import timezone
+from datetime import timedelta
+from .models import User
+import random
+from django.conf import settings
+from django.core.mail import send_mail
 
 
 # 🧩 STUDENT REGISTRATION
@@ -61,6 +68,9 @@ def student_register(request):
 
 
 # 🧩 TEACHER REGISTRATION
+from django.core.mail import send_mail
+from django.conf import settings
+
 def teacher_register(request):
     if request.method == "POST":
         form = TeacherSignUpForm(request.POST)
@@ -74,23 +84,31 @@ def teacher_register(request):
                 user = form.save(commit=False)
                 user.is_teacher = True
                 user.school = school
+                user.is_active = False  # ⛔ deactivate until OTP verified
                 user.save()
 
+                # Save profile details
                 profile = user.teacher_profile
                 profile.contact = form.cleaned_data.get('contact')
                 profile.address = form.cleaned_data.get('address')
                 profile.verification_id = verification_id
                 profile.save()
 
-                login(request, user)
-                messages.success(request, f"✅ Welcome, {user.username}! You’ve been registered as a teacher.")
-                return redirect('teacher_dashboard')
+                # ✅ Generate and send OTP
+                otp = user.generate_otp()
+                subject = "Teacher Account Verification OTP"
+                message = f"Dear {user.username},\n\nYour OTP for verification is: {otp}\n\nPlease enter this to activate your account."
+                send_mail(subject, message, settings.EMAIL_HOST_USER, [user.email])
+
+                request.session['pending_teacher_id'] = user.id
+                messages.info(request, "📧 OTP sent to your registered email. Please verify to activate your account.")
+                return redirect('verify_teacher_otp')
         else:
             messages.error(request, "Please correct the errors below.")
     else:
         form = TeacherSignUpForm()
-    return render(request, 'accounts/teacher_register.html', {'form': form})
 
+    return render(request, 'accounts/teacher_register.html', {'form': form})
 
 # 🏠 HOME
 def home(request):
@@ -103,35 +121,128 @@ def home(request):
     return render(request, 'home.html')
 
 
-# 🔐 LOGIN
+
+
 def login_view(request):
     if request.method == "POST":
         username_or_id = request.POST.get("username")
         password = request.POST.get("password")
+
+        user = None
+
+        # 1️⃣ Try authenticating with username
         user = authenticate(request, username=username_or_id, password=password)
 
+        # 2️⃣ If failed, check if it's a student ID
         if user is None:
+            from accounts.models import StudentProfile
             try:
                 student = StudentProfile.objects.get(student_code=username_or_id)
                 user = authenticate(request, username=student.user.username, password=password)
             except StudentProfile.DoesNotExist:
-                pass
+                user = None
 
+        # 3️⃣ If user found
         if user is not None:
-            login(request, user)
-            messages.success(request, f"Welcome back, {user.username}!")
-            if getattr(user, "is_student", False):
+            if getattr(user, "is_teacher", False):
+                # ✅ Generate OTP for teachers
+                otp = str(random.randint(100000, 999999))
+                user.otp = otp
+                user.save()
+
+                # Send OTP via email
+                subject = "Login Verification OTP"
+                message = f"Dear {user.username},\n\nYour OTP for login is: {otp}\n\nUse this to complete your login."
+                send_mail(subject, message, settings.EMAIL_HOST_USER, [user.email])
+
+                # Store session to verify later
+                request.session['pending_login_user_id'] = user.id
+                messages.info(request, "📧 OTP sent to your email. Please verify to complete login.")
+                return redirect('verify_teacher_login_otp')
+
+            elif getattr(user, "is_student", False):
+                # ✅ Students log in directly (no OTP)
+                login(request, user)
+                messages.success(request, f"Welcome back, {user.username}!")
                 return redirect('student_dashboard')
-            elif getattr(user, "is_teacher", False):
-                return redirect('teacher_dashboard')
-            return redirect('home')
+            else:
+                # Generic fallback for admins
+                login(request, user)
+                return redirect('home')
 
-        messages.error(request, "❌ Invalid username, student ID, or password.")
+        else:
+            messages.error(request, "❌ Invalid username, student ID, or password.")
+
     return render(request, "accounts/login.html")
-
 
 # 🚪 LOGOUT
 def logout_view(request):
     django_logout(request)
     messages.info(request, "👋 You have been logged out successfully.")
     return redirect('home')
+from django.shortcuts import get_object_or_404
+
+
+
+
+# -----------------------------------------
+# 🔐 VERIFY OTP (Teacher Signup)
+# -----------------------------------------
+def verify_teacher_signup_otp(request):
+    """Handles OTP verification for newly registered teachers."""
+    teacher_id = request.session.get('pending_teacher_id')
+    if not teacher_id:
+        messages.error(request, "No registration in progress.")
+        return redirect('teacher_register')
+
+    user = get_object_or_404(User, id=teacher_id)
+
+    if request.method == "POST":
+        entered_otp = request.POST.get("otp")
+        if entered_otp == user.otp:
+            # ✅ Activate teacher account
+            user.is_active = True
+            user.is_verified = True
+            user.otp = None
+            user.save()
+
+            # ✅ Remove pending session
+            del request.session['pending_teacher_id']
+
+            # ✅ Auto-login after verification
+            login(request, user)
+            messages.success(request, f"✅ Welcome, {user.username}! Your account is verified and active.")
+            return redirect('teacher_dashboard')
+        else:
+            messages.error(request, "❌ Invalid OTP. Please try again.")
+
+    return render(request, 'accounts/verify_teacher_otp.html', {'email': user.email})
+
+
+# -----------------------------------------
+# 🔐 VERIFY OTP (Teacher Login)
+# -----------------------------------------
+def verify_teacher_login_otp(request):
+    """Handles OTP verification for teachers during login."""
+    user_id = request.session.get('pending_login_user_id')
+    if not user_id:
+        messages.error(request, "No OTP verification in progress.")
+        return redirect('login')
+
+    user = get_object_or_404(User, id=user_id)
+
+    if request.method == "POST":
+        entered_otp = request.POST.get("otp")
+        if entered_otp == user.otp:
+            user.otp = None
+            user.save()
+
+            # ✅ Log in teacher and clean session
+            login(request, user)
+            del request.session['pending_login_user_id']
+            messages.success(request, f"✅ Welcome back, {user.username}!")
+            return redirect('teacher_dashboard')
+        else:
+            messages.error(request, "❌ Invalid OTP. Please try again.")
+
+    return render(request, 'accounts/verify_teacher_otp.html', {'email': user.email})

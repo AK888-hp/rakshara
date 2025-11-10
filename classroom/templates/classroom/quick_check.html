@@ -1,61 +1,138 @@
 {% extends 'base.html' %}
 {% load static %}
-
 {% block content %}
-<div class="container mt-5">
-  <div class="card p-4 shadow-lg rounded-4">
-    <h2 class="text-center mb-4 text-primary">
-      Quick Check — {{ vc }} ({{ idx|add:1 }}/{{ total }})
-    </h2>
 
-    <h4 class="text-center mb-4">
-      Student: <strong>{{ student.user.get_full_name }}</strong>
-      <small class="text-muted">(Roll No: {{ student.roll_no }})</small>
-    </h4>
+<div class="checkup-container d-flex align-items-center justify-content-center py-5">
+  <div class="checkup-card container p-4 p-md-5 rounded-4 shadow-lg bg-white animate-fade-in">
+    
+    <!-- 🩺 Header -->
+    <div class="text-center mb-4">
+      <h2 class="fw-bold text-gradient">🩺 Quick Health Check</h2>
+      <p class="text-muted mb-1">{{ vc }} — Student {{ idx|add:1 }} of {{ total }}</p>
+    </div>
 
-    <form method="post" class="needs-validation">
+    <!-- 📊 Progress Bar -->
+    <div class="progress rounded-pill mb-4" style="height: 12px;">
+      <div class="progress-bar bg-gradient-primary" 
+           role="progressbar" 
+           style="width: {{ progress }}%;" 
+           aria-valuenow="{{ progress }}" aria-valuemin="0" aria-valuemax="100">
+      </div>
+    </div>
+
+    <!-- 👩‍🎓 Student Info -->
+    <div class="text-center mb-4">
+      <h4 class="fw-semibold text-dark mb-0">{{ student.user.get_full_name }}</h4>
+      <small class="text-muted">Roll No: {{ student.roll_no }}</small>
+    </div>
+
+    <!-- 🧾 Form -->
+    <form method="post" class="row g-3">
       {% csrf_token %}
-      <div class="row g-3">
+      
+      <div class="col-md-6">
+        <label class="form-label fw-semibold">💓 Heart Rate (bpm)</label>
+        <input type="number" name="heart_rate" class="form-control form-control-lg" placeholder="e.g. 75" required>
+      </div>
 
-        <div class="col-md-6">
-          <label class="form-label">Heart Rate (bpm)</label>
-          <input type="number" name="heart_rate" class="form-control" required>
-        </div>
+      <div class="col-md-6">
+        <label class="form-label fw-semibold">🫁 SpO₂ (%)</label>
+        <input type="number" step="0.1" name="spo2" class="form-control form-control-lg" placeholder="e.g. 98" required>
+      </div>
 
-        <div class="col-md-6">
-          <label class="form-label">SpO₂ (%)</label>
-          <input type="number" step="0.1" name="spo2" class="form-control" required>
-        </div>
+      <div class="col-md-6">
+        <label class="form-label fw-semibold">🌬️ Breathing Rate</label>
+        <input type="number" step="0.1" name="breathing_rate" class="form-control form-control-lg" placeholder="e.g. 16" required>
+      </div>
 
-        <div class="col-md-6">
-          <label class="form-label">Breathing Rate</label>
-          <input type="number" step="0.1" name="breathing_rate" class="form-control" required>
-        </div>
+      <div class="col-md-6">
+        <label class="form-label fw-semibold">🌡️ Temperature (°C)</label>
+        <input type="number" step="0.1" name="temperature" class="form-control form-control-lg" placeholder="e.g. 36.8" required>
+      </div>
 
-        <div class="col-md-6">
-          <label class="form-label">Temperature (°C)</label>
-          <input type="number" step="0.1" name="temperature" class="form-control" required>
-        </div>
+      <div class="col-md-6">
+        <label class="form-label fw-semibold">📏 Height (cm)</label>
+        <input type="number" step="0.1" name="height_cm" class="form-control form-control-lg" value="{{ student.height_cm }}">
+      </div>
 
-        <div class="col-md-6">
-          <label class="form-label">Height (cm)</label>
-          <input type="number" step="0.1" name="height_cm" class="form-control" value="{{ student.height_cm }}">
-        </div>
-
-        <div class="col-md-6">
-          <label class="form-label">Weight (kg)</label>
-          <input type="number" step="0.1" name="weight_kg" class="form-control" value="{{ student.weight_kg }}">
-        </div>
-
+      <div class="col-md-6">
+        <label class="form-label fw-semibold">⚖️ Weight (kg)</label>
+        <input type="number" step="0.1" name="weight_kg" class="form-control form-control-lg" value="{{ student.weight_kg }}">
       </div>
 
       <div class="d-flex justify-content-between mt-4">
-        <a href="{% url 'classroom_detail' vc.id %}" class="btn btn-secondary">← Back</a>
-        <button type="submit" class="btn btn-success">
+        <a href="{% url 'classroom_detail' vc.id %}" class="btn btn-outline-secondary rounded-pill px-4 py-2 shadow-sm">
+          ← Back
+        </a>
+        <button type="submit" class="btn btn-success rounded-pill px-4 py-2 shadow-sm">
           Save & Next →
         </button>
       </div>
     </form>
   </div>
 </div>
+
+<!-- 🌈 Styling -->
+<style>
+.checkup-container {
+  min-height: calc(100vh - 120px);
+  background: linear-gradient(-45deg, #007bff, #00c6ff, #17a2b8, #6f42c1);
+  background-size: 400% 400%;
+  animation: gradientShift 15s ease infinite;
+}
+
+.checkup-card {
+  background: #ffffffee;
+  backdrop-filter: blur(10px);
+}
+
+.text-gradient {
+  background: linear-gradient(90deg, #007bff, #00c6ff);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.form-control {
+  border-radius: 50px;
+  border: 1.2px solid #ccc;
+  padding: 10px 20px;
+  transition: all 0.3s ease;
+}
+
+.form-control:focus {
+  border-color: #007bff;
+  box-shadow: 0 0 8px rgba(0,123,255,0.2);
+}
+
+.progress-bar {
+  background: linear-gradient(90deg, #00c6ff, #007bff);
+  transition: width 0.8s ease;
+}
+
+.animate-fade-in {
+  opacity: 0;
+  transform: translateY(15px);
+  animation: fadeInUp 1s ease forwards;
+}
+
+@keyframes gradientShift {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+@keyframes fadeInUp {
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.btn {
+  transition: all 0.3s ease;
+}
+
+.btn:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 15px rgba(0,0,0,0.1);
+}
+</style>
+
 {% endblock %}
