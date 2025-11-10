@@ -41,7 +41,7 @@ class StudentProfile(models.Model):
     height_cm = models.FloatField(null=True, blank=True)
     weight_kg = models.FloatField(null=True, blank=True)
     personal_contact = models.CharField(max_length=20, blank=True)
-    parent_contact = models.CharField(max_length=20, blank=True)
+    parent_contact = models.EmailField(blank=True, null=True)
     address = models.TextField(blank=True)
     class_name = models.CharField(max_length=50)
     section = models.CharField(max_length=10)

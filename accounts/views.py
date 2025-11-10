@@ -15,23 +15,30 @@ from django.core.mail import send_mail
 
 
 # 🧩 STUDENT REGISTRATION
+
 def student_register(request):
     if request.method == "POST":
         form = StudentSignUpForm(request.POST)
         if form.is_valid():
+            # ✅ Create user and mark as student
             user = form.save(commit=False)
             user.is_student = True
             user.school = form.cleaned_data['school']
             user.save()
 
-            # Update student profile
+            # ✅ Update student profile details
             profile = user.student_profile
             profile.roll_no = form.cleaned_data.get('roll_no')
             profile.dob = form.cleaned_data.get('dob')
             profile.height_cm = form.cleaned_data.get('height_cm')
             profile.weight_kg = form.cleaned_data.get('weight_kg')
             profile.personal_contact = form.cleaned_data.get('personal_contact')
-            profile.parent_contact = form.cleaned_data.get('parent_contact')
+
+            # ✅ Save parent email (new field)
+            parent_email = request.POST.get('parent_email')
+            if parent_email:
+                profile.parent_contact = parent_email.strip()
+
             profile.address = form.cleaned_data.get('address')
             profile.class_name = form.cleaned_data.get('class_name')
             profile.section = form.cleaned_data.get('section')
@@ -41,10 +48,16 @@ def student_register(request):
             teachers = TeacherProfile.objects.filter(user__school=user.school)
             found = False
             for teacher in teachers:
-                if teacher.user.classes_teaching.filter(class_name=profile.class_name, section=profile.section).exists():
+                if teacher.user.classes_teaching.filter(
+                    class_name=profile.class_name,
+                    section=profile.section
+                ).exists():
                     Notification.objects.create(
                         teacher=teacher.user,
-                        message=f"🆕 New student {user.get_full_name() or user.username} requested to join class {profile.class_name}-{profile.section}."
+                        message=(
+                            f"🆕 New student {user.get_full_name() or user.username} "
+                            f"requested to join class {profile.class_name}-{profile.section}."
+                        )
                     )
                     JoinRequest.objects.create(
                         student=profile,
@@ -53,20 +66,28 @@ def student_register(request):
                         section=profile.section
                     )
                     found = True
+
             if not found:
                 Notification.objects.create(
-                    message=f"🆕 New student {user.get_full_name() or user.username} registered (no assigned teacher yet)."
+                    message=(
+                        f"🆕 New student {user.get_full_name() or user.username} "
+                        f"registered (no assigned teacher yet)."
+                    )
                 )
 
+            # ✅ Auto-login and redirect
             login(request, user)
-            messages.success(request, f"✅ Account created successfully! Your Student ID: {profile.student_code}")
+            messages.success(
+                request,
+                f"✅ Account created successfully! Your Student ID: {profile.student_code}"
+            )
             return redirect('student_dashboard')
-        messages.error(request, "Please correct the errors below.")
+        else:
+            messages.error(request, "⚠️ Please correct the errors below.")
     else:
         form = StudentSignUpForm()
+
     return render(request, 'accounts/student_register.html', {'form': form})
-
-
 # 🧩 TEACHER REGISTRATION
 from django.core.mail import send_mail
 from django.conf import settings

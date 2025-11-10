@@ -1,104 +1,88 @@
 {% extends 'base.html' %}
 {% block content %}
+<div class="container d-flex align-items-center justify-content-center py-5">
+  <div class="card p-4 shadow-lg rounded-4" style="max-width:600px;width:100%;">
+    <h2 class="text-center fw-bold text-gradient mb-4">🩺 Add Health Vitals</h2>
 
-<div class="vitals-container d-flex align-items-center justify-content-center py-5">
-  <div class="vitals-card p-4 p-md-5 rounded-4 shadow-lg bg-white animate-fade-in text-center">
-
-    <!-- 🩺 Header -->
-    <h2 class="fw-bold text-gradient mb-3">🩺 Add Health Vitals</h2>
-    <p class="text-muted mb-4">Enter your latest health data to analyze your wellness status.</p>
-
-    <!-- 🧾 Form -->
-    <form method="post" class="text-start mx-auto" style="max-width: 480px;">
+    <form method="post" id="vitalForm">
       {% csrf_token %}
-
-      <div class="mb-3">
-        <label class="form-label fw-semibold">💓 Heart Rate (bpm)</label>
-        <input type="number" name="heart_rate" step="1" class="form-control form-control-lg rounded-pill" placeholder="e.g. 75" required>
+      <div class="row g-3">
+        <div class="col-md-6">
+          <label class="form-label">Heart Rate (bpm)</label>
+          <input type="number" name="heart_rate" class="form-control" required>
+        </div>
+        <div class="col-md-6">
+          <label class="form-label">SpO₂ (%)</label>
+          <input type="number" name="spo2" step="0.1" class="form-control" required>
+        </div>
+        <div class="col-md-6">
+          <label class="form-label">Breathing Rate</label>
+          <input type="number" name="breathing_rate" step="0.1" class="form-control" required>
+        </div>
+        <div class="col-md-6">
+          <label class="form-label">Temperature (°C)</label>
+          <input type="number" name="temperature" step="0.1" class="form-control" required>
+        </div>
+        <div class="col-md-6">
+          <label class="form-label">Height (cm)</label>
+          <input type="number" name="height_cm" step="0.1" class="form-control" value="{{ student.height_cm }}">
+        </div>
+        <div class="col-md-6">
+          <label class="form-label">Weight (kg)</label>
+          <input type="number" name="weight_kg" step="0.1" class="form-control" value="{{ student.weight_kg }}">
+        </div>
       </div>
-
-      <div class="mb-3">
-        <label class="form-label fw-semibold">🫁 Blood Oxygen (SpO₂ %)</label>
-        <input type="number" name="spo2" step="0.1" class="form-control form-control-lg rounded-pill" placeholder="e.g. 98" required>
-      </div>
-
-      <div class="mb-3">
-        <label class="form-label fw-semibold">🌬️ Breathing Rate (breaths/min)</label>
-        <input type="number" name="breathing_rate" step="0.1" class="form-control form-control-lg rounded-pill" placeholder="e.g. 16" required>
-      </div>
-
-      <div class="mb-4">
-        <label class="form-label fw-semibold">🌡️ Temperature (°C)</label>
-        <input type="number" name="temperature" step="0.1" class="form-control form-control-lg rounded-pill" placeholder="e.g. 36.8" required>
-      </div>
-
-      <button type="submit" class="btn btn-success rounded-pill px-4 py-2 w-100 shadow-sm">✅ Submit</button>
+      <button type="submit" class="btn btn-success w-100 mt-4 rounded-pill">Submit</button>
     </form>
-
-    <div class="mt-4">
-      <a href="{% url 'student_dashboard' %}" class="btn btn-outline-secondary rounded-pill px-4 py-2 shadow-sm">
-        ← Back to Dashboard
-      </a>
-    </div>
   </div>
 </div>
 
-<!-- 🌈 Styling -->
+<!-- ✅ Health Result Modal -->
+{% if prediction_label %}
+<div class="modal fade show" id="resultModal" tabindex="-1" style="display:block; background:rgba(0,0,0,0.6);" aria-modal="true" role="dialog">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content text-center p-4 rounded-4 shadow-lg">
+      <div class="modal-body">
+        {% if prediction_label == "Healthy" %}
+          <div style="font-size:4rem;">😄</div>
+        {% elif prediction_label == "Mild" %}
+          <div style="font-size:4rem;">😐</div>
+        {% else %}
+          <div style="font-size:4rem;">😟</div>
+        {% endif %}
+        <h3 class="fw-bold mt-3">{{ prediction_label }}</h3>
+        <p class="text-muted">Prediction Score: <strong>{{ prediction_score }}</strong></p>
+        <button id="okBtn" class="btn btn-primary rounded-pill px-4 mt-3">OK</button>
+      </div>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+<script>
+  // ✅ Redirect to dashboard when OK is clicked
+  document.addEventListener("DOMContentLoaded", () => {
+    const okBtn = document.getElementById("okBtn");
+    if (okBtn) {
+      okBtn.addEventListener("click", () => {
+        window.location.href = "{% url 'student_dashboard' %}";
+      });
+    }
+  });
+</script>
+
 <style>
-.vitals-container {
-  min-height: calc(100vh - 120px);
-  background: linear-gradient(-45deg, #007bff, #00c6ff, #17a2b8, #6f42c1);
-  background-size: 400% 400%;
-  animation: gradientShift 15s ease infinite;
-}
-
-.vitals-card {
-  background: #ffffffee;
-  backdrop-filter: blur(10px);
-  width: 100%;
-  max-width: 600px;
-}
-
 .text-gradient {
   background: linear-gradient(90deg, #007bff, #00c6ff);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
 }
-
-.form-control {
-  border-radius: 50px;
-  border: 1.2px solid #ccc;
-  padding: 10px 20px;
-  transition: all 0.3s ease;
+.modal-content {
+  animation: popIn 0.5s ease;
 }
-.form-control:focus {
-  border-color: #007bff;
-  box-shadow: 0 0 8px rgba(0,123,255,0.2);
-}
-
-.btn {
-  transition: all 0.3s ease;
-}
-.btn:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 8px 15px rgba(0,0,0,0.1);
-}
-
-.animate-fade-in {
-  opacity: 0;
-  transform: translateY(15px);
-  animation: fadeInUp 1s ease forwards;
-}
-
-@keyframes fadeInUp {
-  to { opacity: 1; transform: translateY(0); }
-}
-
-@keyframes gradientShift {
-  0% { background-position: 0% 50%; }
-  50% { background-position: 100% 50%; }
-  100% { background-position: 0% 50%; }
+@keyframes popIn {
+  from { transform: scale(0.8); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
 }
 </style>
-
 {% endblock %}

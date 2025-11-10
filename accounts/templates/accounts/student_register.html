@@ -10,6 +10,19 @@
       {% csrf_token %}
       <div class="form-fields row g-3">
         {{ form.as_p }}
+
+        <!-- 🧑‍🤝‍🧑 Parent Email Field -->
+        <div class="col-12">
+          <label for="parent_email" class="form-label fw-semibold">📧 Parent Email Address</label>
+          <input 
+            type="email" 
+            name="parent_email" 
+            id="parent_email" 
+            class="form-control" 
+            placeholder="Enter parent's email address (for alerts)" 
+            required>
+          <small class="text-muted">Used to send health alerts if student shows mild or critical conditions.</small>
+        </div>
       </div>
 
       <button type="submit" class="btn btn-success w-100 rounded-pill py-2 mt-3 shadow-sm">

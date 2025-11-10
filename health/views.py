@@ -10,9 +10,7 @@ from .utils import predict_health
 # 🩺 ADD VITAL RECORD
 @login_required
 def add_vital_record(request, student_code=None):
-    """Allows students or teachers to add health vitals."""
     user = request.user
-
     if user.is_student:
         student_profile = user.student_profile
     else:
@@ -23,25 +21,15 @@ def add_vital_record(request, student_code=None):
             return redirect('teacher_dashboard')
 
     if request.method == 'POST':
-        try:
-            hr = int(request.POST.get('heart_rate'))
-            spo2 = float(request.POST.get('spo2'))
-            br = float(request.POST.get('breathing_rate'))
-            temp = float(request.POST.get('temperature'))
-        except (TypeError, ValueError):
-            messages.error(request, "Please enter valid numeric values.")
-            return redirect('add_vital')
-
-        # Default to student profile height/weight if not provided
+        hr = int(request.POST.get('heart_rate'))
+        spo2 = float(request.POST.get('spo2'))
+        br = float(request.POST.get('breathing_rate'))
+        temp = float(request.POST.get('temperature'))
         weight = request.POST.get('weight_kg') or student_profile.weight_kg
         height = request.POST.get('height_cm') or student_profile.height_cm
-        weight = float(weight)
-        height = float(height)
 
-        # 🧠 Predict health
         score, label = predict_health(hr, spo2, br, temp, weight, height)
 
-        # 💾 Save record
         VitalRecord.objects.create(
             student=student_profile,
             heart_rate=hr,
@@ -54,12 +42,14 @@ def add_vital_record(request, student_code=None):
             prediction_label=label
         )
 
-        messages.success(request, f"✅ Vitals saved. Prediction: {score} ({label})")
-        next_url = request.POST.get('next') or 'student_dashboard'
-        return redirect(next_url)
+        # ✅ Return template with popup instead of redirect
+        return render(request, 'health/add_vital.html', {
+            'student': student_profile,
+            'prediction_label': label,
+            'prediction_score': score,
+        })
 
     return render(request, 'health/add_vital.html', {'student': student_profile})
-
 
 # 📊 STUDENT DASHBOARD
 @login_required
