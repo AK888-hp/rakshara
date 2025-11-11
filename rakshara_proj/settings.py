@@ -21,17 +21,15 @@ SECRET_KEY = os.environ.get(
 DEBUG = 'RENDER' not in os.environ
 
 # 5. CONFIGURE ALLOWED_HOSTS
-ALLOWED_HOSTS = []
-
+ALLOWED_HOSTS = ['rakshara-web.onrender.com']
 RENDER_EXTERNAL_HOSTNAME = os.environ.get('RENDER_EXTERNAL_URL')
 if RENDER_EXTERNAL_HOSTNAME:
     ALLOWED_HOSTS.append(RENDER_EXTERNAL_HOSTNAME)
 
-# If in development, allow localhost
+# This is for local testing (won't be used on Render)
 if not 'RENDER' in os.environ:
     ALLOWED_HOSTS.append('127.0.0.1')
     ALLOWED_HOSTS.append('localhost')
-
 
 # Application definition
 INSTALLED_APPS = [
