@@ -4,7 +4,8 @@
 {% block title %}{{ vc.class_name }} - {{ vc.section|upper }}{% endblock %}
 
 {% block content %}
-<div class="card animate-fade-in-up" style="padding: 2.5rem;"> <div class="page-header">
+<div class="card animate-fade-in-up" style="padding: 2.5rem;">
+    <div class="page-header">
         <div>
             <h2 class="text-gradient">{{ vc.class_name }} - {{ vc.section|upper }}</h2>
             <p>{{ vc.school.name }} | {% trans "Total Students" %}: <strong>{{ students.count }}</strong></p>
@@ -14,9 +15,13 @@
         </a>
     </div>
 
-    <div class="form-group">
-        <label for="studentSearch" class="form-label">{% trans "Search Students" %}</label>
-        <input type="text" id="studentSearch" class="form-control" placeholder="{% trans "Search by student name or roll number..." %}">
+    <hr class="content-divider"> 
+    
+    <div class="page-header">
+        <h3>{% trans "Student Roster" %}</h3>
+        <div class="form-group" style="margin-bottom: 0; min-width: 300px;">
+            <input type="text" id="studentSearch" class="form-control" placeholder="{% trans "Search by student name or roll number..." %}">
+        </div>
     </div>
 
     {% if students %}
@@ -26,12 +31,9 @@
           <tr>
             <th>{% trans "Roll No" %}</th>
             <th>{% trans "Name" %}</th>
-            <th>{% trans "Class" %}</th>
-            <th>{% trans "Section" %}</th>
-            <th>{% trans "Height (cm)" %}</th>
-            <th>{% trans "Weight (kg)" %}</th>
+            <th>{% trans "Student ID" %}</th>
             <th>{% trans "Parent Contact" %}</th>
-            <th>{% trans "Address" %}</th>
+            <th>{% trans "Actions" %}</th>
           </tr>
         </thead>
         <tbody id="studentTable">
@@ -43,21 +45,57 @@
                     {{ s.user.get_full_name|default:s.user.username }}
                 </a>
             </td>
-            <td>{{ s.class_name }}</td>
-            <td>{{ s.section }}</td>
-            <td>{{ s.height_cm|default:"--" }}</td>
-            <td>{{ s.weight_kg|default:"--" }}</td>
+            <td>{{ s.student_code }}</td>
             <td>{{ s.parent_contact|default:"--" }}</td>
-            <td>{{ s.address|default:"--" }}</td>
-          </tr>
+            
+            <td class="action-buttons">
+                <a href="{% url 'view_student_history' student_id=s.id %}" 
+                   class="btn btn-primary" 
+                   style="--btn-size: small;">
+                    {% trans "History" %}
+                </a>
+                <a href="{% url 'add_vital_for_student' s.student_code %}" 
+                   class="btn btn-success" 
+                   style="--btn-size: small;">
+                    {% trans "Measure" %}
+                </a>
+                <a href="{% url 'delete_student_from_class' student_id=s.id class_id=vc.id %}?confirm=true" 
+                   class="btn btn-danger" 
+                   style="--btn-size: small;"
+                   onclick="return confirm('{% blocktrans with student_name=s.user.get_full_name|default:s.user.username %}Are you sure you want to remove {{ student_name }} from this class?{% endblocktrans %}');">
+                    {% trans "Remove" %}
+                </a>
+            </td>
+            </tr>
           {% endfor %}
         </tbody>
       </table>
     </div>
     {% else %}
-      <p classs="text-center text-muted mt-4">{% trans "No students enrolled yet." %}</p>
+      <p class="text-center text-muted mt-4">{% trans "No students enrolled yet." %}</p>
     {% endif %}
-</div>
+    <hr class="content-divider">
+    <h3 class="section-title">{% trans "Class Health Analytics" %}</h3>
+
+    <div class="dashboard-grid">
+        <div class="card">
+            <div class="card-header">
+                <h3>{% trans "Current Health Status" %}</h3>
+            </div>
+            <div class="chart-container" style="height:300px;">
+                <canvas id="pieChart"></canvas>
+            </div>
+        </div>
+        <div class="card">
+            <div class="card-header">
+                <h3>{% trans "Class Average Risk Score" %}</h3>
+            </div>
+            <div class="chart-container" style="height:300px;">
+                <canvas id="lineChart"></canvas>
+            </div>
+        </div>
+    </div>
+    </div>
 
 <style>
     .page-header {
@@ -68,13 +106,44 @@
         gap: 1rem;
         margin-bottom: 2rem;
     }
-    .page-header h2 { margin-bottom: 0.25rem; }
+    .page-header h2, .page-header h3 { margin-bottom: 0.25rem; }
     .page-header p { margin-bottom: 0; }
     .text-gradient {
         background: var(--color-gradient);
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
     }
+
+    /* --- Graph Grid --- */
+    .section-title {
+        font-size: 1.75rem;
+        font-weight: 700;
+        color: var(--color-text);
+        margin-bottom: 1.5rem;
+    }
+    .dashboard-grid {
+        display: grid;
+        grid-template-columns: 1fr 2fr; /* Pie chart smaller, line graph bigger */
+        gap: 1.5rem;
+        margin-bottom: 2rem;
+    }
+    .chart-container {
+        position: relative;
+        width: 100%;
+        height: 300px;
+        padding: 1rem;
+    }
+    .content-divider {
+        margin: 2.5rem 0;
+        border: 0;
+        border-top: 1px solid var(--color-border);
+    }
+    
+    /* Responsive for graphs */
+    @media (max-width: 992px) {
+        .dashboard-grid { grid-template-columns: 1fr; }
+    }
+    /* --- END: Graph Grid --- */
     
     /* Table Styling */
     .table-wrapper { 
@@ -99,7 +168,6 @@
     .data-table tr:last-child td { border-bottom: none; }
     .data-table tr:hover { background: var(--color-primary-light); }
 
-    /* Make the student name link look good in the table */
     .data-table a {
         font-weight: 600;
         text-decoration: none;
@@ -107,10 +175,23 @@
     .data-table a:hover {
         text-decoration: underline;
     }
+    .btn[style*="--btn-size: small"] {
+        padding: 0.4rem 0.8rem;
+        font-size: 0.85rem;
+    }
+
+    /* Style for the new button group */
+    .action-buttons {
+        display: flex;
+        gap: 0.5rem;
+        flex-wrap: wrap;
+    }
 </style>
 {% endblock %}
 
 {% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
 <script>
 document.getElementById("studentSearch").addEventListener("keyup", function() {
   const filter = this.value.toLowerCase();
@@ -118,6 +199,115 @@ document.getElementById("studentSearch").addEventListener("keyup", function() {
     const text = row.innerText.toLowerCase();
     row.style.display = text.includes(filter) ? "" : "none";
   });
+});
+</script>
+
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+    // Get colors from CSS
+    const dangerColor = getComputedStyle(document.documentElement).getPropertyValue('--color-danger').trim();
+    const successColor = getComputedStyle(document.documentElement).getPropertyValue('--color-success').trim();
+    const primaryColor = getComputedStyle(document.documentElement).getPropertyValue('--color-primary').trim();
+    const warningColor = getComputedStyle(document.documentElement).getPropertyValue('--color-warning').trim();
+    const mutedColor = getComputedStyle(document.documentElement).getPropertyValue('--color-text-muted').trim();
+    const textColor = getComputedStyle(document.documentElement).getPropertyValue('--color-text').trim();
+    const gridColor = getComputedStyle(document.documentElement).getPropertyValue('--color-border').trim();
+
+    // --- 1. Pie Chart ---
+    const pieData = {{ pie_chart_data_json|safe }};
+    const pieCtx = document.getElementById('pieChart');
+    if (pieCtx && pieData.data.some(v => v > 0)) {
+        new Chart(pieCtx, {
+            type: 'doughnut',
+            data: {
+                labels: pieData.labels,
+                datasets: [{
+                    data: pieData.data,
+                    backgroundColor: [
+                        successColor, // Healthy/Normal
+                        warningColor, // Watch/Mild
+                        dangerColor,  // High Risk/Critical
+                        mutedColor    // Not Yet Checked
+                    ],
+                    borderWidth: 0,
+                    hoverOffset: 10
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: {
+                            color: textColor,
+                            usePointStyle: true,
+                            pointStyle: 'circle'
+                        }
+                    }
+                }
+            }
+        });
+    } else if (pieCtx) {
+        // Fallback text if no data
+        const ctx = pieCtx.getContext('2d');
+        ctx.textAlign = 'center';
+        ctx.fillStyle = mutedColor;
+        ctx.font = '16px ' + getComputedStyle(document.documentElement).getPropertyValue('--font-family');
+        ctx.fillText('{% trans "No health data yet for this class." %}', pieCtx.width / 2, pieCtx.height / 2);
+    }
+
+    // --- 2. Line Chart ---
+    const lineData = {{ line_chart_data_json|safe }};
+    const lineCtx = document.getElementById('lineChart');
+    if (lineCtx && lineData.data.length > 0) {
+        new Chart(lineCtx, {
+            type: 'line',
+            data: {
+                labels: lineData.labels,
+                datasets: [{
+                    label: 'Class Average Risk Score',
+                    data: lineData.data,
+                    borderColor: primaryColor,
+                    fill: false,
+                    tension: 0.3,
+                    borderWidth: 3,
+                    pointRadius: 5,
+                    pointBackgroundColor: 'var(--color-surface)',
+                    pointBorderWidth: 3,
+                    pointHoverRadius: 8
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { 
+                    legend: { display: false }
+                },
+                scales: {
+                    x: { 
+                        title: { display: true, text: 'Date', color: mutedColor },
+                        ticks: { color: mutedColor },
+                        grid: { color: gridColor }
+                    },
+                    y: { 
+                        title: { display: true, text: 'Avg. Risk Score', color: mutedColor },
+                        ticks: { color: mutedColor },
+                        grid: { color: gridColor },
+                        min: 0,
+                        max: 100
+                    }
+                }
+            }
+        });
+    } else if (lineCtx) {
+        // Fallback text if no data
+        const ctx = lineCtx.getContext('2d');
+        ctx.textAlign = 'center';
+        ctx.fillStyle = mutedColor;
+        ctx.font = '16px ' + getComputedStyle(document.documentElement).getPropertyValue('--font-family');
+        ctx.fillText('{% trans "No health data yet to show a trend." %}', lineCtx.width / 2, lineCtx.height / 2);
+    }
 });
 </script>
 {% endblock %}

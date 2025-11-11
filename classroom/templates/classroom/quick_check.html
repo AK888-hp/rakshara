@@ -61,6 +61,12 @@
 <div class="modal-overlay" id="resultModal">
     <div class="modal-card animate-fade-in-up glow-{{ prediction_label|lower }}">
         
+        <div class="modal-emoji">
+        {% if "healthy" in prediction_label|lower %}😄
+        {% elif "mild" in prediction_label|lower or "moderate" in prediction_label|lower %}😐
+        {% else %}😟
+        {% endif %}
+        </div>
         <h3 class="modal-title">{{ prediction_label }}</h3>
         <p class="modal-text">{% trans "Prediction Score" %}: <strong>{{ prediction_score }}</strong></p>
 
@@ -86,6 +92,8 @@
 {% if invalid_email %}
 <div class="modal-overlay" id="invalidEmailModal">
     <div class="modal-card animate-fade-in-up glow-warning">
+        
+        <div class="modal-emoji">⚠️</div>
         <h3 class="modal-title" style="color: var(--color-warning);">{% trans "Invalid Parent Email" %}</h3>
         <p class="modal-text">{% trans "The registered parent email is invalid or missing." %}</p>
         <div class="modal-actions">
@@ -129,10 +137,18 @@
         border-top: 5px solid var(--color-border);
     }
     
+    /* --- NEW EMOJI STYLE --- */
+    .modal-emoji {
+        font-size: 4rem;
+        line-height: 1;
+        margin-bottom: 1rem;
+    }
+    /* --- END NEW STYLE --- */
+
     .modal-title { 
         font-size: 1.75rem; 
         color: var(--color-text);
-        margin-top: 0.5rem; /* Added margin for spacing */
+        margin-top: 0; /* Removed top margin */
     }
     .modal-text { font-size: 1rem; color: var(--color-text-muted); }
     

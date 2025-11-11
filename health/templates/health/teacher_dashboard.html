@@ -11,7 +11,6 @@
     <div class="dashboard-header-actions">
         <button id="notification-toggle-btn" class="icon-btn">
             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>
-            
             {% if unread_count > 0 %}
             <span class="notification-badge">{{ unread_count }}</span>
             {% endif %}
@@ -20,7 +19,6 @@
 </div>
 
 <div class="dashboard-grid">
-    
     <div class="dashboard-main">
         
         {% if pending_requests %}
@@ -44,7 +42,7 @@
                             <td>{{ req.student.user.get_full_name|default:req.student.user.username }}</td>
                             <td>{{ req.class_name }}</td>
                             <td>{{ req.section|upper }}</td>
-                            <td>
+                            <td class="action-buttons">
                                 <a href="{% url 'approve_request' req.id %}" class="btn btn-success" style="--btn-size: small;">{% trans "Approve" %}</a>
                                 <a href="{% url 'reject_request' req.id %}" class="btn btn-danger" style="--btn-size: small;">{% trans "Reject" %}</a>
                             </td>
@@ -60,7 +58,7 @@
             <div class="card-header">
                 <h3>{% trans "My Classes" %}</h3>
             </div>
-            {% if classes %}
+            {% if my_classes %}
             <div class="table-wrapper">
                 <table class="data-table">
                     <thead>
@@ -72,13 +70,17 @@
                         </tr>
                     </thead>
                     <tbody>
-                        {% for c in classes %}
+                        {% for c in my_classes %}
                         <tr>
                             <td>{{ c.class_name }}</td>
                             <td>{{ c.section|upper }}</td>
                             <td>{{ c.student_count }}</td>
-                            <td>
+                            <td class="action-buttons">
                                 <a href="{% url 'classroom_detail' c.id %}" class="btn btn-primary" style="--btn-size: small;">{% trans "View" %}</a>
+                                <form method="post" action="{% url 'delete_classroom' c.id %}" onsubmit="return confirm('{% blocktrans with class_name=c.class_name section=c.section %}Are you sure you want to permanently delete class {{ class_name }}-{{ section }}? This cannot be undone.{% endblocktrans %}');">
+                                    {% csrf_token %}
+                                    <button type="submit" class="btn btn-danger" style="--btn-size: small;">{% trans "Delete" %}</button>
+                                </form>
                             </td>
                         </tr>
                         {% endfor %}
@@ -89,8 +91,54 @@
             <p>{% trans "No virtual classrooms yet." %}</p>
             {% endif %}
         </div>
-    </div>
-    </div>
+
+        {% if top_classes %}
+        <div class="card animate-fade-in-up" style="animation-delay: 0.3s; overflow: hidden; position: relative;" id="podium-card">
+            <div class="card-header">
+                <h3>{% trans "Top 3 Healthiest Classes" %} ({{ request.user.school.name }})</h3>
+            </div>
+            <div class="podium-wrapper">
+                {% if top_classes.1 %}
+                <div class="podium-item podium-2">
+                    <div class="podium-rank">2</div>
+                    <div class="podium-details">
+                        <div class="podium-class">{{ top_classes.1.name }}</div>
+                        <div class="podium-teacher">{{ top_classes.1.teacher }}</div>
+                        <div class="podium-score">{% trans "Avg. Risk" %}: {{ top_classes.1.score }}</div>
+                    </div>
+                </div>
+                {% endif %}
+
+                {% if top_classes.0 %}
+                <div class="podium-item podium-1">
+                    <div class="podium-rank">1</div>
+                    <div class="podium-details">
+                        <div class="podium-class">{{ top_classes.0.name }}</div>
+                        <div class="podium-teacher">{{ top_classes.0.teacher }}</div>
+                        <div class="podium-score">{% trans "Avg. Risk" %}: {{ top_classes.0.score }}</div>
+                    </div>
+                </div>
+                {% endif %}
+
+                {% if top_classes.2 %}
+                <div class="podium-item podium-3">
+                    <div class="podium-rank">3</div>
+                    <div class="podium-details">
+                        <div class="podium-class">{{ top_classes.2.name }}</div>
+                        <div class="podium-teacher">{{ top_classes.2.teacher }}</div>
+                        <div class="podium-score">{% trans "Avg. Risk" %}: {{ top_classes.2.score }}</div>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+            <canvas id="confetti-canvas"></canvas>
+        </div>
+        {% endif %}
+        </div>
+
+    <div class="dashboard-sidebar">
+        </div>
+</div>
 
 <button id="fab-add-class" class="fab" title="{% trans 'Create New Class' %}">
     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
@@ -140,165 +188,96 @@
 
 
 <style>
-    /* 1. Header Changes */
-    .dashboard-header {
+    /* Header Changes */
+    .dashboard-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; }
+    .dashboard-header h2 { font-size: 2rem; margin-bottom: 0.25rem; }
+    .dashboard-header-actions { position: relative; }
+    .icon-btn { background: var(--color-surface); border: 1px solid var(--color-border); border-radius: 50%; width: 44px; height: 44px; display: grid; place-items: center; cursor: pointer; transition: all var(--transition-speed); color: var(--color-text); }
+    .icon-btn:hover { background: var(--color-primary-light); color: var(--color-primary); }
+    .notification-badge { position: absolute; top: 0; right: 0; display: block; background: var(--color-danger); color: #fff; font-size: 0.75rem; font-weight: 700; padding: 2px 7px; border-radius: 20px; border: 2px solid var(--color-surface); }
+    
+    /* Grid Layout */
+    .dashboard-grid { 
+        display: grid; 
+        /* UPDATED: Sidebar column is removed */
+        grid-template-columns: 1fr; 
+        gap: 1.5rem; 
+    }
+    .dashboard-main { display: flex; flex-direction: column; gap: 1.5rem; }
+    .dashboard-sidebar { display: none; } /* Hide the sidebar area entirely */
+
+    /* --- Podium Styles --- */
+    #confetti-canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 1; pointer-events: none; }
+    .podium-wrapper {
         display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 2rem;
+        align-items: flex-end;
+        justify-content: center;
+        padding: 2rem 1rem;
+        gap: 5px;
+        min-height: 250px;
+        perspective: 800px;
     }
-    .dashboard-header h2 {
-        font-size: 2rem;
-        margin-bottom: 0.25rem;
+    .podium-item {
+        width: 30%;
+        max-width: 180px;
+        background-color: var(--color-primary);
+        color: white;
+        text-align: center;
+        border-radius: 8px 8px 0 0;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+        transform-style: preserve-3d;
+        transition: transform 0.5s ease-out;
+        z-index: 2; /* Above canvas */
     }
-    .dashboard-header-actions {
-        position: relative;
+    .podium-item:before { /* 3D Front Face */
+        content: '';
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        width: 100%;
+        height: 20px;
+        background: rgba(0,0,0,0.2);
+        transform: rotateX(-90deg) translateY(10px) translateZ(10px);
     }
-    .icon-btn {
-        background: var(--color-surface);
-        border: 1px solid var(--color-border);
-        border-radius: 50%;
-        width: 44px;
-        height: 44px;
-        display: grid;
-        place-items: center;
-        cursor: pointer;
-        transition: all var(--transition-speed);
-        color: var(--color-text);
-    }
-    .icon-btn:hover {
-        background: var(--color-primary-light);
-        color: var(--color-primary);
-    }
-    .notification-badge {
+    .podium-item:after { /* 3D Side Face */
+        content: '';
         position: absolute;
         top: 0;
         right: 0;
-        display: block;
-        background: var(--color-danger);
-        color: #fff;
-        font-size: 0.75rem;
-        font-weight: 700;
-        padding: 2px 7px;
-        border-radius: 20px;
-        border: 2px solid var(--color-surface);
+        height: 100%;
+        width: 20px;
+        background: rgba(0,0,0,0.2);
+        transform: rotateY(90deg) translateX(10px) translateZ(-10px);
     }
-
-    /* 2. Grid Change (from 2-col to 1-col) */
-    .dashboard-grid {
-        display: grid;
-        grid-template-columns: 1fr; /* Was 2fr 1fr */
-        gap: 1.5rem;
+    .podium-item:hover {
+        transform: scale(1.05) translateZ(20px);
     }
-    .dashboard-main {
-        display: flex;
-        flex-direction: column;
-        gap: 1.5rem;
+    .podium-details { padding: 1rem 0.5rem; }
+    .podium-rank {
+        font-size: 2rem;
+        font-weight: 800;
+        padding: 0.5rem;
+        background: rgba(0,0,0,0.1);
+        border-radius: 8px 8px 0 0;
     }
+    .podium-class { font-size: 1.1rem; font-weight: 700; }
+    .podium-teacher { font-size: 0.85rem; opacity: 0.8; }
+    .podium-score { font-size: 0.9rem; font-weight: 700; margin-top: 0.5rem; }
     
-    /* 3. FAB Styling */
-    .fab {
-        position: fixed;
-        bottom: 2rem;
-        right: 2rem;
-        width: 56px;
-        height: 56px;
-        border-radius: 50%;
-        background: var(--color-primary);
-        color: white;
-        border: none;
-        display: grid;
-        place-items: center;
-        box-shadow: var(--shadow-md);
-        cursor: pointer;
-        transition: all var(--transition-speed);
-        z-index: 1000;
-    }
-    .fab:hover {
-        background: var(--color-primary-dark);
-        transform: translateY(-3px) scale(1.05);
-    }
+    .podium-1 { height: 180px; background: #FFD700; color: var(--color-text); animation: podium-rise 1s ease-out 0s 1; }
+    .podium-2 { height: 140px; background: #C0C0C0; color: var(--color-text); animation: podium-rise 1s ease-out 0.2s 1; }
+    .podium-3 { height: 100px; background: #CD7F32; color: white; animation: podium-rise 1s ease-out 0.4s 1; }
 
-    /* 4. Modal Styling */
-    .modal-overlay {
-        position: fixed;
-        inset: 0;
-        background: rgba(0,0,0,0.5);
-        backdrop-filter: blur(5px);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        z-index: 2000;
-    }
-    .modal-card {
-        background: var(--color-surface);
-        padding: 2rem;
-        border-radius: var(--border-radius);
-        box-shadow: var(--shadow-md);
-        max-width: 500px;
-        width: 90%;
-    }
-    .modal-title {
-        font-size: 1.5rem;
-        color: var(--color-text);
-        margin-bottom: 0;
-    }
-    .modal-actions {
-        display: flex;
-        gap: 1rem;
-        justify-content: flex-end;
-        margin-top: 1.5rem;
-    }
-    .modal-actions .btn {
-        width: auto;
-    }
+    .podium-1 .podium-rank { background: rgba(0,0,0,0.1); }
+    .podium-2 .podium-rank { background: rgba(0,0,0,0.1); }
+    .podium-3 .podium-rank { background: rgba(255,255,255,0.1); }
     
-    /* 5. Notification Panel Styling */
-    .notification-panel {
-        position: absolute;
-        top: 60px; /* Below the icon */
-        right: 0;
-        width: 380px;
-        max-width: 90vw;
-        background: var(--color-surface);
-        border-radius: var(--border-radius);
-        box-shadow: var(--shadow-md);
-        border: 1px solid var(--color-border);
-        z-index: 1001;
-        overflow: hidden;
+    @keyframes podium-rise {
+        from { transform: translateY(200px) scale(0.5); }
+        to { transform: translateY(0) scale(1); }
     }
-    .notification-panel-body {
-        max-height: 400px;
-        overflow-y: auto;
-    }
-    .notification-list {
-        list-style: none;
-        padding: 0;
-        margin: 0;
-    }
-    .notification-item {
-        padding: 0.75rem 1rem;
-        border-bottom: 1px solid var(--color-border);
-    }
-    .notification-item:last-child {
-        border-bottom: none;
-    }
-    .notification-item .message {
-        display: block;
-        color: var(--color-text);
-        margin-bottom: 0.25rem;
-    }
-    .notification-item .date {
-        font-size: 0.85rem;
-        color: var(--color-text-muted);
-    }
-    .notification-item.unread {
-        background: var(--color-primary-light);
-    }
-    .notification-item.unread .message {
-        font-weight: 700;
-    }
-
+    /* --- END: Podium --- */
+    
     /* Table Styling */
     .table-wrapper { overflow-x: auto; }
     .data-table { width: 100%; border-collapse: collapse; text-align: left; }
@@ -307,11 +286,40 @@
     .data-table tr:last-child td { border-bottom: none; }
     .data-table tr:hover { background: #fdfdff; }
     .data-table .btn[style*="--btn-size: small"] { padding: 0.4rem 0.8rem; font-size: 0.85rem; }
+    .action-buttons { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+    
+    /* Notification List */
+    .notification-list { list-style: none; padding: 0; margin: 0; }
+    .notification-item { padding: 0.75rem 0; border-bottom: 1px solid var(--color-border); }
+    .notification-item:last-child { border-bottom: none; padding-bottom: 0; }
+    .notification-item:first-child { padding-top: 0; }
+    .notification-item .message { display: block; color: var(--color-text); margin-bottom: 0.25rem; }
+    .notification-item .date { font-size: 0.85rem; color: var(--color-text-muted); }
+    .notification-item.unread .message { font-weight: 700; }
+
+    /* FAB Styling */
+    .fab { position: fixed; bottom: 2rem; right: 2rem; width: 56px; height: 56px; border-radius: 50%; background: var(--color-primary); color: white; border: none; display: grid; place-items: center; box-shadow: var(--shadow-md); cursor: pointer; transition: all var(--transition-speed); z-index: 1000; }
+    .fab:hover { background: var(--color-primary-dark); transform: translateY(-3px) scale(1.05); }
+
+    /* Modal Styling */
+    .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); backdrop-filter: blur(5px); display: flex; align-items: center; justify-content: center; z-index: 2000; }
+    .modal-card { background: var(--color-surface); padding: 2rem; border-radius: var(--border-radius); box-shadow: var(--shadow-md); max-width: 500px; width: 90%; }
+    .modal-title { font-size: 1.5rem; color: var(--color-text); margin-bottom: 0; }
+    .modal-actions { display: flex; gap: 1rem; justify-content: flex-end; margin-top: 1.5rem; }
+    .modal-actions .btn { width: auto; }
+    
+    /* Notification Panel Styling */
+    .notification-panel { position: absolute; top: 60px; right: 0; width: 380px; max-width: 90vw; background: var(--color-surface); border-radius: var(--border-radius); box-shadow: var(--shadow-md); border: 1px solid var(--color-border); z-index: 1001; overflow: hidden; }
+    .notification-panel-body { max-height: 400px; overflow-y: auto; }
+    
+    /* REMOVED the media query that was breaking the panel */
+
 </style>
 {% endblock %}
 
 
 {% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
 <script>
 document.addEventListener("DOMContentLoaded", () => {
     
@@ -321,48 +329,62 @@ document.addEventListener("DOMContentLoaded", () => {
     const closeClassModalBtn = document.getElementById('close-class-modal');
 
     if (fab && classModal && closeClassModalBtn) {
-        // Open modal
-        fab.addEventListener('click', () => {
-            classModal.style.display = 'flex';
-        });
-
-        // Close modal with button
-        closeClassModalBtn.addEventListener('click', () => {
-            classModal.style.display = 'none';
-        });
-
-        // Close modal by clicking overlay
+        fab.addEventListener('click', () => classModal.style.display = 'flex');
+        closeClassModalBtn.addEventListener('click', () => classModal.style.display = 'none');
         classModal.addEventListener('click', (e) => {
-            if (e.target === classModal) {
-                classModal.style.display = 'none';
-            }
+            if (e.target === classModal) classModal.style.display = 'none';
         });
     }
 
-    // --- Notification Panel Logic ---
+    // --- Notification Panel Logic (Still works) ---
     const notifyBtn = document.getElementById('notification-toggle-btn');
     const notifyPanel = document.getElementById('notification-panel');
 
     if (notifyBtn && notifyPanel) {
         notifyBtn.addEventListener('click', (e) => {
-            e.stopPropagation(); // Prevent click from bubbling to document
+            e.stopPropagation();
             const isHidden = notifyPanel.style.display === 'none';
             notifyPanel.style.display = isHidden ? 'block' : 'none';
         });
-
-        // Close panel when clicking outside
         document.addEventListener('click', (e) => {
             if (notifyPanel.style.display === 'block' && !notifyPanel.contains(e.target)) {
                 notifyPanel.style.display = 'none';
             }
         });
-
-        // Stop panel from closing when clicking inside it
-        notifyPanel.addEventListener('click', (e) => {
-            e.stopPropagation();
-        });
+        notifyPanel.addEventListener('click', (e) => e.stopPropagation());
     }
 
+    // --- Confetti Animation for Podium ---
+    {% if top_classes.0 %} // Only run if there is a 1st place winner
+    const podiumCard = document.getElementById('podium-card');
+    const canvas = document.getElementById('confetti-canvas');
+    if (podiumCard && canvas && typeof confetti === 'function') {
+        const myConfetti = confetti.create(canvas, {
+            resize: true,
+            useWorker: true
+        });
+
+        // Fire confetti on load
+        setTimeout(() => {
+            myConfetti({
+                particleCount: 150,
+                spread: 90,
+                origin: { y: 0.6, x: 0.5 },
+                colors: ['#FFD700', '#C0C0C0', '#CD7F32', '#ffffff']
+            });
+        }, 1200); // After podium animation
+
+        // Also fire on hover
+        podiumCard.addEventListener('mouseenter', () => {
+            myConfetti({
+                particleCount: 50,
+                spread: 60,
+                origin: { y: 0.7, x: 0.5 },
+                ticks: 100
+            });
+        });
+    }
+    {% endif %}
 });
 </script>
 {% endblock %}

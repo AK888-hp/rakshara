@@ -1,208 +1,214 @@
+# classroom/views.py
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
-from .models import VirtualClassroom, StudentProfile
-from accounts.models import StudentProfile, Notification, JoinRequest
-from health.models import VitalRecord
-from health.utils import predict_health
-from django.core.mail import send_mail
 from django.conf import settings
-from ai_engine.translate import get_translated_text
+from django.core.mail import send_mail, BadHeaderError
+from smtplib import SMTPRecipientsRefused
+from ai_engine.utils import predict_health
+from .models import VirtualClassroom
+from health.models import VitalRecord
+from accounts.models import StudentProfile, Notification, User, JoinRequest
 
-# 🧩 Teacher Dashboard
-@login_required
+from django.db.models import Avg, Count, Case, When, Prefetch  # <-- IMPORT PREFETCH
+from django.db.models.functions import TruncDay
+import json
+
+
+# Redirect to the main dashboard in the 'health' app
 def teacher_dashboard(request):
-    """Display teacher dashboard with classes, notifications, and pending join requests."""
-    teacher = request.user
-    school = getattr(teacher, 'school', None)
+    return redirect('teacher_dashboard')
 
-    # ✅ Restrict to teachers only
-    if not getattr(teacher, "is_teacher", False):
-        messages.error(request, "Access denied: only teachers can access this page.")
-        return redirect('student_dashboard')
 
-    # ✅ Notifications
-    notifications = Notification.objects.filter(teacher=teacher).order_by('-created_at')
-    unread_count = notifications.filter(is_read=False).count()
-    Notification.objects.filter(teacher=teacher, is_read=False).update(is_read=True)
-
-    # ✅ Virtual classes
-    classes = VirtualClassroom.objects.filter(teacher=teacher)
-
-    # ✅ Pending join requests (students waiting for approval)
-    pending_requests = JoinRequest.objects.filter(
-        teacher=teacher, approved=False
-    ).select_related('student__user')
-
-    # ✅ Handle new class creation
-    if request.method == 'POST':
-        class_name = request.POST.get('class_name')
-        section = request.POST.get('section')
-
-        if not school:
-            messages.error(request, 'You are not assigned to any school.')
-            return redirect('teacher_dashboard')
-
-        if VirtualClassroom.objects.filter(school=school, class_name=class_name, section=section).exists():
-            messages.warning(request, f"⚠️ Class {class_name}-{section} already exists.")
-        else:
-            vc = VirtualClassroom.objects.create(
-                school=school,
-                teacher=teacher,
-                class_name=class_name,
-                section=section
-            )
-            messages.success(request, f"🏫 Class {vc.class_name}-{vc.section} created successfully!")
-
-        return redirect('teacher_dashboard')
-
-    # ✅ Add student counts
-    for c in classes:
-        c.student_count = c.students.count()
-
-    return render(
-        request,
-        'classroom/teacher_dashboard.html',
-        {
-            'classes': classes,
-            'notifications': notifications,
-            'unread_count': unread_count,
-            'pending_requests': pending_requests,
-        }
+@login_required
+def approve_request(request, req_id):
+    req = get_object_or_404(JoinRequest, id=req_id, teacher=request.user)
+    
+    vc = get_object_or_404(
+        VirtualClassroom, 
+        teacher=request.user, 
+        class_name=req.class_name, 
+        section=req.section
     )
+    
+    vc.students.add(req.student)
+    req.approved = True
+    req.save()
+    messages.success(request, f"{req.student.user.username} approved.")
+    return redirect('teacher_dashboard')
 
 
-# 🧩 Approve Join Request
 @login_required
-def approve_request(request, pk):
-    """Approve student’s join request and add them to the class."""
-    join_req = get_object_or_404(JoinRequest, pk=pk, teacher=request.user)
-    vc = VirtualClassroom.objects.filter(
-        teacher=request.user,
-        class_name=join_req.class_name,
-        section=join_req.section
-    ).first()
+def reject_request(request, req_id):
+    req = get_object_or_404(JoinRequest, id=req_id, teacher=request.user)
+    req.delete()
+    messages.warning(request, f"{req.student.user.username} request rejected.")
+    return redirect('teacher_dashboard')
 
-    if vc:
-        vc.students.add(join_req.student)
-        join_req.approved = True
-        join_req.save()
-        Notification.objects.create(
-            teacher=request.user,
-            message=f"✅ {join_req.student.user.username} has been approved and added to {vc.class_name}-{vc.section}."
-        )
-        messages.success(request, f"✅ {join_req.student.user.username} added to {vc.class_name}-{vc.section}.")
+
+@login_required
+def delete_student_from_class(request, student_id, class_id):
+    if not request.user.is_teacher:
+        return redirect('home')
+
+    vc = get_object_or_404(VirtualClassroom, id=class_id, teacher=request.user)
+    student = get_object_or_404(StudentProfile, id=student_id)
+
+    if 'confirm' in request.GET:
+        vc.students.remove(student)
+        messages.success(request, f"{student.user.username} has been removed from the class.")
     else:
-        messages.error(request, "⚠️ No matching class found to add this student.")
-    return redirect('teacher_dashboard')
+        messages.info(request, "Please confirm deletion.")
+    
+    return redirect('classroom_detail', pk=class_id)
 
 
-# 🧩 Reject Join Request
-@login_required
-def reject_request(request, pk):
-    """Reject and delete student join request."""
-    join_req = get_object_or_404(JoinRequest, pk=pk, teacher=request.user)
-    join_req.delete()
-    messages.info(request, f"🚫 Join request from {join_req.student.user.username} rejected.")
-    return redirect('teacher_dashboard')
-
-
-# 🧩 Class Detail Page
 @login_required
 def classroom_detail(request, pk):
-    """Display all students of a specific virtual classroom."""
-    vc = get_object_or_404(VirtualClassroom, pk=pk)
-    if not getattr(request.user, "is_teacher", False):
-        return redirect('student_dashboard')
+    """
+    Shows the roster for a class, PLUS:
+    1. A pie chart of current student health.
+    2. A line graph of average class health score over time.
+    """
+    if not request.user.is_teacher:
+        return redirect('home')
+    
+    vc = get_object_or_404(VirtualClassroom, id=pk, teacher=request.user)
+    
+    # --- PIE CHART DATA (FIXED) ---
+    latest_vitals_prefetch = Prefetch(
+        'vitals',
+        queryset=VitalRecord.objects.order_by('-recorded_at'),
+        to_attr='latest_vitals_list'
+    )
+    students = vc.students.all().select_related('user').prefetch_related(latest_vitals_prefetch)
 
-    students = vc.students.all().order_by('roll_no')
-    return render(request, 'classroom/classroom_detail.html', {'vc': vc, 'students': students})
+    # NEW: Robust status counting
+    status_counts = {
+        "Healthy": 0,
+        "Watch": 0,
+        "Risk": 0,
+        "Not Yet Checked": 0
+    }
 
+    for student in students:
+        if student.latest_vitals_list:
+            latest_vital = student.latest_vitals_list[0]
+            label = latest_vital.prediction_label.lower()
+            
+            if "healthy" in label or "normal" in label:
+                status_counts["Healthy"] += 1
+            elif "watch" in label or "mild" in label or "moderate" in label:
+                status_counts["Watch"] += 1
+            elif "high risk" in label or "critical" in label:
+                status_counts["Risk"] += 1
+            else:
+                # Fallback for any other non-empty label
+                status_counts["Risk"] += 1 
+        else:
+            status_counts["Not Yet Checked"] += 1
+            
+    pie_chart_data = {
+        "labels": ["Healthy/Normal", "Watch/Mild", "High Risk/Critical", "Not Yet Checked"],
+        "data": [
+            status_counts["Healthy"],
+            status_counts["Watch"],
+            status_counts["Risk"],
+            status_counts["Not Yet Checked"]
+        ],
+    }
 
+    # --- 2. LINE GRAPH DATA (Class Average) ---
+    all_vitals = VitalRecord.objects.filter(student__in=students)
 
+    avg_health_over_time = all_vitals.annotate(
+        day=TruncDay('recorded_at')
+    ).values('day').annotate(
+        avg_score=Avg('prediction_score')
+    ).order_by('day')
 
+    line_chart_data = {
+        "labels": [entry['day'].strftime('%b %d, %Y') for entry in avg_health_over_time],
+        "data": [round(entry['avg_score'], 1) for entry in avg_health_over_time],
+    }
+
+    context = {
+        'vc': vc,
+        'students': students,
+        'pie_chart_data_json': json.dumps(pie_chart_data),
+        'line_chart_data_json': json.dumps(line_chart_data),
+    }
+    return render(request, 'classroom/classroom_detail.html', context)
 
 @login_required
 def quick_checkup(request, pk):
     """
-    Teachers can perform quick sequential health checkups for each student.
-    Handles parent email alerts safely and shows popups for invalid addresses.
+    Handles the multi-step form for a teacher to quickly check student vitals.
     """
-    vc = get_object_or_404(VirtualClassroom, id=pk)
-    students = list(vc.students.all().order_by("roll_no"))
-    idx = int(request.GET.get("idx", 0))
+    if not request.user.is_teacher:
+        return redirect('home')
 
-    # ✅ End of student list
-    if idx >= len(students):
-        messages.success(request, "✅ Quick checkup completed for all students!")
-        return redirect("classroom_detail", vc.id)
+    vc = get_object_or_404(VirtualClassroom, id=pk, teacher=request.user)
+    students = list(vc.students.all())
+    total_students = len(students)
 
-    student = students[idx]
+    try:
+        idx = int(request.GET.get('idx', 0))
+        student_profile = students[idx]
+    except (IndexError, ValueError):
+        messages.success(request, "✅ Quick checkup completed for all students.")
+        return redirect('classroom_detail', pk=pk)
 
-    # ✅ Handle SEND ALERT button
-    if request.method == "POST" and "alert" in request.POST:
-        parent_email = getattr(student, "parent_contact", "").strip()
-        if not parent_email or "@" not in parent_email:
-            # Show popup alert on page for invalid email
-            return render(
-                request,
-                "classroom/quick_check.html",
-                {
-                    "vc": vc,
-                    "student": student,
-                    "idx": idx,
-                    "total": len(students),
-                    "invalid_email": True,
-                    "prediction_label": "Mild",
-                },
-            )
+    if request.method == 'POST':
+        # --- Handle Alert Sending ---
+        if 'alert' in request.POST:
+            parent_email = student_profile.parent_contact
+            if parent_email:
+                try:
+                    subject = f"Health Alert for {student_profile.user.get_full_name()}"
+                    message = (
+                        f"Dear Parent/Guardian,\n\n"
+                        f"This is an alert from {vc.school.name}. "
+                        f"A recent health check for {student_profile.user.get_full_name()} (Class: {vc.class_name}-{vc.section}) showed a potential health concern. "
+                        f"Please contact the school for more details.\n\n"
+                        f"- Rakshara System"
+                    )
+                    send_mail(subject, message, settings.EMAIL_HOST_USER, [parent_email])
+                    messages.success(request, f"📧 Alert sent to {parent_email} for {student_profile.user.get_full_name()}.")
+                
+                except (SMTPRecipientsRefused, BadHeaderError):
+                    return render(request, 'classroom/quick_check.html', {
+                        'vc': vc, 'student': student_profile, 'idx': idx, 'total': total_students, 'invalid_email': True
+                    })
+                except Exception as e:
+                    messages.error(request, f"Could not send email. Error: {e}")
+            else:
+                return render(request, 'classroom/quick_check.html', {
+                    'vc': vc, 'student': student_profile, 'idx': idx, 'total': total_students, 'invalid_email': True
+                })
+            
+            return redirect(f"{request.path_info}?idx={idx + 1}")
 
-        try:
-            subject = f"⚠️ Health Alert for {student.user.get_full_name()}"
-            message = (
-                f"Dear Parent,\n\n"
-                f"During today's school health checkup, your child {student.user.get_full_name()} "
-                f"was found to have a mild or critical health condition.\n\n"
-                f"Please take necessary care and consult a doctor if needed.\n\n"
-                f"Regards,\nRakshara Health Monitoring Team"
-            )
-            send_mail(subject, message, settings.EMAIL_HOST_USER, [parent_email])
-            messages.success(
-                request, f"📧 Alert sent successfully to {student.user.get_full_name()}'s parent."
-            )
-            return redirect(f"{request.path}?idx={idx + 1}")
-
-        except (SMTPRecipientsRefused, BadHeaderError):
-            return render(
-                request,
-                "classroom/quick_check.html",
-                {
-                    "vc": vc,
-                    "student": student,
-                    "idx": idx,
-                    "total": len(students),
-                    "invalid_email": True,
-                    "prediction_label": "Mild",
-                },
-            )
-        except Exception as e:
-            messages.error(request, f"❌ Email sending failed: {e}")
-            return redirect(f"{request.path}?idx={idx + 1}")
-
-    # ✅ Handle normal checkup submission
-    if request.method == "POST":
-        try:
-            hr = int(request.POST.get("heart_rate"))
-            spo2 = float(request.POST.get("spo2"))
-            br = float(request.POST.get("breathing_rate"))
-            temp = float(request.POST.get("temperature"))
-            weight = float(request.POST.get("weight_kg") or student.weight_kg or 0)
-            height = float(request.POST.get("height_cm") or student.height_cm or 0)
+        # --- Handle Vital Submission ---
+        else:
+            hr = int(request.POST.get('heart_rate'))
+            spo2 = float(request.POST.get('spo2'))
+            br = float(request.POST.get('breathing_rate'))
+            temp = float(request.POST.get('temperature'))
+            
+            weight = request.POST.get('weight_kg') or student_profile.weight_kg or None
+            height = request.POST.get('height_cm') or student_profile.height_cm or None
+            
+            if weight and (not student_profile.weight_kg or float(weight) != student_profile.weight_kg):
+                student_profile.weight_kg = weight
+            if height and (not student_profile.height_cm or float(height) != student_profile.height_cm):
+                student_profile.height_cm = height
+            student_profile.save()
 
             score, label = predict_health(hr, spo2, br, temp, weight, height)
 
             VitalRecord.objects.create(
-                student=student,
+                student=student_profile,
                 heart_rate=hr,
                 spo2=spo2,
                 breathing_rate=br,
@@ -210,30 +216,71 @@ def quick_checkup(request, pk):
                 weight_kg=weight,
                 height_cm=height,
                 prediction_score=score,
-                prediction_label=label,
+                prediction_label=label
             )
 
-            return render(
-                request,
-                "classroom/quick_check.html",
-                {
-                    "vc": vc,
-                    "student": student,
-                    "idx": idx,
-                    "total": len(students),
-                    "prediction_score": score,
-                    "prediction_label": label,
-                },
-            )
+            return render(request, 'classroom/quick_check.html', {
+                'vc': vc,
+                'student': student_profile,
+                'idx': idx,
+                'total': total_students,
+                'prediction_label': label,
+                'prediction_score': score,
+            })
 
-        except (TypeError, ValueError):
-            messages.error(request, "⚠️ Invalid or missing vital data entered.")
-        except Exception as e:
-            messages.error(request, f"❌ Error saving record: {e}")
+    # Standard GET request
+    return render(request, 'classroom/quick_check.html', {
+        'vc': vc,
+        'student': student_profile,
+        'idx': idx,
+        'total': total_students
+    })
 
-    # ✅ Page load
-    return render(
-        request,
-        "classroom/quick_check.html",
-        {"vc": vc, "student": student, "idx": idx, "total": len(students)},
-    )
+@login_required
+def view_student_history(request, student_id):
+    """
+    Shows a specific student's profile and health history (for teachers).
+    """
+    if not request.user.is_teacher:
+        return redirect('home')
+
+    student = get_object_or_404(StudentProfile, id=student_id, user__school=request.user.school)
+    
+    # Get vitals for the chart
+    vitals_qs = student.vitals.all().order_by('recorded_at') # Chronological
+    
+    line_chart_data = {
+        "labels": [v.recorded_at.strftime("%d %b %H:%M") for v in vitals_qs],
+        "hr_data": [v.heart_rate for v in vitals_qs],
+        "spo2_data": [v.spo2 for v in vitals_qs],
+        "temp_data": [v.temperature_c for v in vitals_qs],
+    }
+    
+    context = {
+        'profile': student,
+        'vitals': vitals_qs.reverse(), # Show newest first in table
+        'line_chart_data_json': json.dumps(line_chart_data)
+    }
+    return render(request, 'classroom/student_history.html', context)
+
+@login_required
+def delete_classroom(request, pk):
+    """
+    Deletes an entire virtual classroom.
+    """
+    if not request.user.is_teacher:
+        return redirect('home')
+    
+    # Ensure the teacher deleting the class is the one who owns it
+    vc = get_object_or_404(VirtualClassroom, id=pk, teacher=request.user)
+    
+    if request.method == 'POST':
+        class_name = vc.class_name
+        section = vc.section
+        vc.delete()
+        messages.success(request, f"Class {class_name}-{section} has been permanently deleted.")
+        return redirect('teacher_dashboard')
+    
+    # If not POST, just redirect back (or show a confirmation page)
+    messages.error(request, "Invalid request.")
+    return redirect('teacher_dashboard')
