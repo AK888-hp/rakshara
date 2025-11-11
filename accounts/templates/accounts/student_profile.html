@@ -1,0 +1,100 @@
+{% extends 'base.html' %}
+{% load i18n %}
+{% load static %}
+
+{% block title %}{% trans "My Profile" %}{% endblock %}
+
+{% block content %}
+<div class="card animate-fade-in-up profile-card">
+    <div class="profile-header">
+        <div class="profile-avatar">
+            {% if profile.image %}
+                <img src="{{ profile.image.url }}" alt="Profile Picture">
+            {% else %}
+                <img src="{% static 'images/default_avatar.png' %}" alt="Default Avatar"> 
+                {% endif %}
+        </div>
+        <div class="profile-info">
+            <h2 class="profile-name">{{ profile.user.get_full_name|default:profile.user.username }}</h2>
+            <p class="profile-code">{% trans "Student ID" %}: {{ profile.student_code }}</p>
+            <p class="profile-school">{{ profile.user.school.name }}</p>
+        </div>
+        <a href="{% url 'edit_student_profile' %}" class="btn btn-primary">{% trans "Edit Profile" %}</a>
+    </div>
+
+    <hr class_="content-divider">
+
+    <h3 class="section-title">{% trans "Personal Information" %}</h3>
+    <div class="info-grid">
+        <div class="info-item"><label>{% trans "Username" %}</label><span>{{ profile.user.username }}</span></div>
+        <div class="info-item"><label>{% trans "Email" %}</label><span>{{ profile.user.email }}</span></div>
+        <div class="info-item"><label>{% trans "Date of Birth" %}</label><span>{{ profile.dob|date:"Y-m-d"|default:"--" }}</span></div>
+        <div class="info-item"><label>{% trans "Personal Contact" %}</label><span>{{ profile.personal_contact|default:"--" }}</span></div>
+    </div>
+
+    <h3 class="section-title">{% trans "Academic Information" %}</h3>
+    <div class="info-grid">
+        <div class="info-item"><label>{% trans "Class" %}</label><span>{{ profile.class_name }}</span></div>
+        <div class="info-item"><label>{% trans "Section" %}</label><span>{{ profile.section }}</span></div>
+        <div class="info-item"><label>{% trans "Roll No" %}</label><span>{{ profile.roll_no }}</span></div>
+    </div>
+
+    <h3 class="section-title">{% trans "Health & Guardian" %}</h3>
+    <div class="info-grid">
+        <div class="info-item"><label>{% trans "Height" %}</label><span>{{ profile.height_cm|default:"--" }} cm</span></div>
+        <div class="info-item"><label>{% trans "Weight" %}</label><span>{{ profile.weight_kg|default:"--" }} kg</span></div>
+        <div class="info-item"><label>{% trans "Parent Email" %}</label><span>{{ profile.parent_contact|default:"--" }}</span></div>
+        <div class="info-item span-2"><label>{% trans "Address" %}</label><span>{{ profile.address|default:"--" }}</span></div>
+    </div>
+</div>
+
+<style>
+    .profile-card { max-width: 900px; margin: 0 auto; }
+    .profile-header { display: flex; align-items: center; gap: 2rem; flex-wrap: wrap; }
+    .profile-avatar img {
+        width: 120px;
+        height: 120px;
+        border-radius: 50%;
+        object-fit: cover;
+        border: 4px solid var(--color-border);
+    }
+    .profile-name { font-size: 2rem; margin-bottom: 0.25rem; color: var(--color-text); }
+    .profile-code { font-size: 1rem; color: var(--color-text-muted); margin-bottom: 0.25rem; }
+    .profile-school { font-size: 1.1rem; color: var(--color-primary); font-weight: 600; margin: 0; }
+    .profile-header .btn { margin-left: auto; height: fit-content; }
+    
+    .content-divider { margin: 2rem 0; border: 0; border-top: 1px solid var(--color-border); }
+    .section-title { font-size: 1.25rem; font-weight: 600; color: var(--color-primary); margin-top: 1rem; margin-bottom: 1rem; }
+    
+    .info-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 1.5rem;
+        margin-bottom: 1.5rem;
+    }
+    .info-item {
+        background: var(--color-bg);
+        padding: 1rem;
+        border-radius: 8px;
+    }
+    .info-item label {
+        display: block;
+        font-weight: 600;
+        font-size: 0.9rem;
+        color: var(--color-text-muted);
+        margin-bottom: 0.25rem;
+    }
+    .info-item span {
+        font-size: 1.05rem;
+        color: var(--color-text);
+    }
+    .info-item.span-2 { grid-column: span 2; }
+
+    @media (max-width: 768px) {
+        .profile-header { flex-direction: column; text-align: center; }
+        .profile-header .btn { margin-left: 0; margin-top: 1rem; }
+        .info-grid { grid-template-columns: 1fr; }
+        .info-item.span-2 { grid-column: span 1; }
+    }
+</style>
+{% endblock %}

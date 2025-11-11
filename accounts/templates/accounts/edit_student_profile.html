@@ -1,61 +1,28 @@
 {% extends 'base.html' %}
 {% load i18n %}
-{% block title %}{% trans "Student Registration" %}{% endblock %}
+
+{% block title %}{% trans "Edit Profile" %}{% endblock %}
 
 {% block content %}
 <div class="auth-page-wrapper">
     <div class="auth-card animate-fade-in-up" style="max-width: 800px;">
         
-        <h1 class="auth-title">{% trans "Student Registration" %}</h1>
-        <p class="auth-subtitle">{% trans "Create your account to start using" %} <strong>Rakshara</strong></p>
+        <h1 class="auth-title">{% trans "Edit Profile" %}</h1>
+        <p class="auth-subtitle">{% trans "Update your personal and academic information." %}</p>
 
         <form method="post" class="auth-form needs-loader" enctype="multipart/form-data">
             {% csrf_token %}
             
             <div class="form-grid">
-                <div class="form-group span-2">
+                <div class="form-group">
                     <label for="{{ form.username.id_for_label }}" class="form-label">{{ form.username.label }}</label>
                     {{ form.username }}
                     {{ form.username.errors }}
                 </div>
-
-                <div class="form-group span-2">
+                <div class="form-group">
                     <label for="{{ form.email.id_for_label }}" class="form-label">{{ form.email.label }}</label>
                     {{ form.email }}
                     {{ form.email.errors }}
-                </div>
-
-                <div class="form-group">
-                    <label for="{{ form.password1.id_for_label }}" class="form-label">{{ form.password1.label }}</label>
-                    {{ form.password1 }}
-                    {{ form.password1.errors }}
-                </div>
-
-                <div class="form-group">
-                    <label for="{{ form.password2.id_for_label }}" class="form-label">{{ form.password2.label }}</label>
-                    {{ form.password2 }}
-                    {{ form.password2.errors }}
-                </div>
-
-                <div class="form-group span-2 password-rules">
-                    {{ form.password1.help_text }}
-                </div>
-
-                <div class="form-group span-2">
-                    <label for="{{ form.school.id_for_label }}" class="form-label">{{ form.school.label }}</label>
-                    {{ form.school }}
-                    {{ form.school.errors }}
-                </div>
-                
-                <div class="form-group">
-                    <label for="{{ form.class_name.id_for_label }}" class="form-label">{{ form.class_name.label }}</label>
-                    {{ form.class_name }}
-                    {{ form.class_name.errors }}
-                </div>
-                <div class="form-group">
-                    <label for="{{ form.section.id_for_label }}" class="form-label">{{ form.section.label }}</label>
-                    {{ form.section }}
-                    {{ form.section.errors }}
                 </div>
 
                 <div class="form-group">
@@ -67,6 +34,17 @@
                     <label for="{{ form.dob.id_for_label }}" class="form-label">{{ form.dob.label }}</label>
                     {{ form.dob }}
                     {{ form.dob.errors }}
+                </div>
+                
+                <div class="form-group">
+                    <label for="{{ form.class_name.id_for_label }}" class="form-label">{{ form.class_name.label }}</label>
+                    {{ form.class_name }}
+                    {{ form.class_name.errors }}
+                </div>
+                <div class="form-group">
+                    <label for="{{ form.section.id_for_label }}" class="form-label">{{ form.section.label }}</label>
+                    {{ form.section }}
+                    {{ form.section.errors }}
                 </div>
 
                 <div class="form-group">
@@ -85,19 +63,12 @@
                     {{ form.personal_contact }}
                     {{ form.personal_contact.errors }}
                 </div>
-                
                 <div class="form-group">
-                    <label for="parent_email" class="form-label">{% trans "Parent Email Address" %}</label>
-                    <input 
-                        type="email" 
-                        name="parent_email" 
-                        id="parent_email" 
-                        class="form-control" 
-                        placeholder="{% trans "Enter parent's email (for alerts)" %}" 
-                        required>
-                    <small class="form-text">{% trans "Used to send health alerts." %}</small>
+                    <label for="{{ form.parent_contact.id_for_label }}" class="form-label">{{ form.parent_contact.label }}</label>
+                    {{ form.parent_contact }}
+                    {{ form.parent_contact.errors }}
                 </div>
-
+                
                 <div class="form-group span-2">
                     <label for="{{ form.address.id_for_label }}" class="form-label">{{ form.address.label }}</label>
                     {{ form.address }}
@@ -106,30 +77,29 @@
 
                 <div class="form-group span-2">
                     <label for="{{ form.image.id_for_label }}" class="form-label">{{ form.image.label }}</label>
+                    {% if form.image.value %}
+                        <p>{% trans "Currently" %}: <a href="{{ form.image.value.url }}">{{ form.image.value.name }}</a></p>
+                    {% endif %}
                     {{ form.image }}
                     {{ form.image.errors }}
                 </div>
 
-            </div> <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 1rem;">
-                {% trans "Register" %}
-            </button>
+            </div> <div class="form-actions">
+                <a href="{% url 'student_profile' %}" class="btn btn-outline">{% trans "Cancel" %}</a>
+                <button type="submit" class="btn btn-success">{% trans "Save Changes" %}</button>
+            </div>
         </form>
-
-        <div class="auth-links">
-            <p>{% trans "Already have an account?" %}</p>
-            <a href="{% url 'login' %}" class="btn btn-outline">{% trans "Login" %}</a>
-        </div>
     </div>
 </div>
 
 <style>
-    /* Manually styling the form fields */
+    /* Use the same styles as the registration page */
     .auth-form input[type="text"],
     .auth-form input[type="email"],
     .auth-form input[type="password"],
     .auth-form input[type="number"],
     .auth-form input[type="date"],
-    .auth-form input[type="file"], /* Added file input */
+    .auth-form input[type="file"],
     .auth-form select,
     .auth-form textarea {
         width: 100%;
@@ -141,15 +111,9 @@
         background-color: var(--color-surface);
         color: var(--color-text);
     }
-    .auth-form input[type="file"] { padding: 0.7rem; } /* Custom padding for file input */
-    .auth-form select {
-        height: calc(1.5em + 1.7rem + 2px); /* Matches input height */
-    }
-    .auth-form textarea {
-        min-height: 100px;
-        font-family: var(--font-family);
-    }
-
+    .auth-form input[type="file"] { padding: 0.7rem; }
+    .auth-form select { height: calc(1.5em + 1.7rem + 2px); }
+    .auth-form textarea { min-height: 100px; font-family: var(--font-family); }
     .auth-form input:focus,
     .auth-form select:focus,
     .auth-form textarea:focus {
@@ -158,47 +122,24 @@
         box-shadow: 0 0 0 3px var(--color-primary-light);
     }
     
-    .form-text {
-        display: block;
-        margin-top: 0.25rem;
-        font-size: 0.85rem;
-        color: var(--color-text-muted);
-    }
-
-    /* --- Grid Layout --- */
     .form-grid {
         display: grid;
         grid-template-columns: 1fr 1fr;
         gap: 1.5rem;
     }
-    
-    .form-grid .span-2 {
-        grid-column: span 2;
+    .form-grid .span-2 { grid-column: span 2; }
+
+    .form-actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 1rem;
+        margin-top: 2rem;
     }
+    .form-actions .btn { width: auto; }
 
     @media (max-width: 768px) {
-        .form-grid {
-            grid-template-columns: 1fr;
-        }
-        .form-grid .span-2 {
-            grid-column: span 1;
-        }
+        .form-grid { grid-template-columns: 1fr; }
+        .form-grid .span-2 { grid-column: span 1; }
     }
-    
-    /* --- Password Rules Styling --- */
-    .password-rules .helptext {
-        background-color: var(--color-primary-light);
-        border-radius: 8px;
-        padding: 0.75rem 1.5rem;
-        font-size: 0.9rem;
-        list-style-type: disc;
-        color: var(--color-text-muted);
-        padding-left: 30px;
-        margin: 0;
-    }
-    .password-rules .helptext li {
-        margin-bottom: 0.25rem;
-    }
-
 </style>
 {% endblock %}

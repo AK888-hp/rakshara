@@ -5,8 +5,18 @@
 
 {% block content %}
 <div class="dashboard-header animate-fade-in-up">
-    <h2>{{ profile.user.get_full_name|default:profile.user.username }}'s {% trans "Dashboard" %}</h2>
-    <p>{% trans "Student ID" %}: <strong>{{ profile.student_code }}</strong></p>
+    <div>
+        <h2>{{ profile.user.get_full_name|default:profile.user.username }}'s {% trans "Dashboard" %}</h2>
+        <p>{% trans "Student ID" %}: <strong>{{ profile.student_code }}</strong></p>
+    </div>
+    
+    <a href="{% url 'student_profile' %}" class="profile-btn" title="{% trans 'View Profile' %}">
+        {% if profile.image %}
+            <img src="{{ profile.image.url }}" alt="{% trans 'Profile Picture' %}">
+        {% else %}
+            <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+        {% endif %}
+    </a>
 </div>
 
 <div class="summary-grid animate-fade-in-up" style="animation-delay: 0.1s;">
@@ -95,8 +105,42 @@
 </div>
 
 <style>
-    .dashboard-header { margin-bottom: 2rem; }
+    .dashboard-header { 
+        margin-bottom: 2rem;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
     .dashboard-header h2 { font-size: 2rem; margin-bottom: 0.25rem; }
+    
+    /* UPDATED: Profile Button Style */
+    .profile-btn {
+        display: grid;
+        place-items: center;
+        width: 44px;
+        height: 44px;
+        border-radius: 50%;
+        background-color: var(--color-surface);
+        border: 1px solid var(--color-border);
+        color: var(--color-text-muted);
+        transition: all var(--transition-speed);
+        flex-shrink: 0;
+        overflow: hidden; /* <-- NEW: This clips the image */
+        padding: 0; /* <-- NEW: Ensure no padding */
+    }
+    .profile-btn:hover {
+        background-color: var(--color-primary-light);
+        color: var(--color-primary);
+        text-decoration: none;
+        box-shadow: var(--shadow-sm);
+    }
+    /* NEW: Style for the image inside the button */
+    .profile-btn img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover; /* This makes the image fill the circle */
+    }
+    /* END NEW STYLES */
     
     .summary-grid {
         display: grid;
@@ -266,8 +310,8 @@ document.addEventListener("DOMContentLoaded", () => {
                 position: 'top',
                 labels: {
                     color: textColor,
-                    usePointStyle: true,  // <-- USE SOLID CIRCLES
-                    pointStyle: 'circle' // <-- SPECIFY CIRCLE
+                    usePointStyle: true,
+                    pointStyle: 'circle'
                 }
             } 
         },
@@ -283,12 +327,11 @@ document.addEventListener("DOMContentLoaded", () => {
             grid: { color: gridColor }
           }
         },
-        // --- "3D" Point Styling ---
         elements: {
             point: {
-                radius: 5,                  // Larger points
-                backgroundColor: pointBg,   // "Beveled" look (white/dark bg)
-                borderWidth: 3,             // Thicker border
+                radius: 5,
+                backgroundColor: pointBg,
+                borderWidth: 3,
                 hoverRadius: 8,
                 hoverBorderWidth: 3
             }

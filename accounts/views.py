@@ -1,7 +1,7 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth import login, authenticate
 from django.contrib import messages
-from .forms import StudentSignUpForm, TeacherSignUpForm
+from .forms import StudentSignUpForm, TeacherSignUpForm, StudentProfileEditForm # <-- IMPORT NEW FORM
 from .models import School, StudentProfile, User, TeacherProfile, Notification, JoinRequest
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth import logout as django_logout
@@ -18,23 +18,25 @@ from django.utils import translation
 # 🧩 STUDENT REGISTRATION
 def student_register(request):
     if request.method == "POST":
-        form = StudentSignUpForm(request.POST)
+        # --- Pass request.FILES to the form ---
+        form = StudentSignUpForm(request.POST, request.FILES)
         if form.is_valid():
-            # ✅ Create user and mark as student
             user = form.save(commit=False)
             user.is_student = True
             user.school = form.cleaned_data['school']
             user.save()
 
-            # ✅ Update student profile details
             profile = user.student_profile
             profile.roll_no = form.cleaned_data.get('roll_no')
             profile.dob = form.cleaned_data.get('dob')
             profile.height_cm = form.cleaned_data.get('height_cm')
             profile.weight_kg = form.cleaned_data.get('weight_kg')
             profile.personal_contact = form.cleaned_data.get('personal_contact')
-
-            # ✅ Save parent email (new field)
+            
+            # --- Save the new image field ---
+            if 'image' in request.FILES:
+                profile.image = request.FILES['image']
+            
             parent_email = request.POST.get('parent_email')
             if parent_email:
                 profile.parent_contact = parent_email.strip()
@@ -44,7 +46,8 @@ def student_register(request):
             profile.section = form.cleaned_data.get('section')
             profile.save()
 
-            # ✅ Notify teachers (create join request)
+            # ... (rest of the view is unchanged) ...
+            
             teachers = TeacherProfile.objects.filter(user__school=user.school)
             found = False
             for teacher in teachers:
@@ -55,7 +58,7 @@ def student_register(request):
                     Notification.objects.create(
                         teacher=teacher.user,
                         message=(
-                            f"🆕 New student {user.get_full_name() or user.username} "
+                            f"New student {user.get_full_name() or user.username} "
                             f"requested to join class {profile.class_name}-{profile.section}."
                         )
                     )
@@ -70,25 +73,25 @@ def student_register(request):
             if not found:
                 Notification.objects.create(
                     message=(
-                        f"🆕 New student {user.get_full_name() or user.username} "
+                        f"New student {user.get_full_name() or user.username} "
                         f"registered (no assigned teacher yet)."
                     )
                 )
 
-            # ✅ Auto-login and redirect
             login(request, user)
             messages.success(
                 request,
-                f"✅ Account created successfully! Your Student ID: {profile.student_code}"
+                f"Account created successfully! Your Student ID: {profile.student_code}"
             )
             return redirect('student_dashboard') # Assumes this is in another app's urls
         else:
-            messages.error(request, "⚠️ Please correct the errors below.")
+            messages.error(request, "Please correct the errors below.")
     else:
         form = StudentSignUpForm()
 
     return render(request, 'accounts/student_register.html', {'form': form})
 
+# ... (teacher_register, home, login_view, logout_view, OTP views, set_language... all unchanged) ...
 # 🧩 TEACHER REGISTRATION
 def teacher_register(request):
     if request.method == "POST":
@@ -98,7 +101,7 @@ def teacher_register(request):
             school = form.cleaned_data['school']
 
             if school.school_code != verification_id:
-                form.add_error('verification_id', '❌ Verification ID does not match school records')
+                form.add_error('verification_id', 'Verification ID does not match school records')
             else:
                 user = form.save(commit=False)
                 user.is_teacher = True
@@ -120,8 +123,8 @@ def teacher_register(request):
                 send_mail(subject, message, settings.EMAIL_HOST_USER, [user.email])
 
                 request.session['pending_teacher_id'] = user.id
-                messages.info(request, "📧 OTP sent to your registered email. Please verify to activate your account.")
-                return redirect('verify_teacher_otp')
+                messages.info(request, "OTP sent to your registered email. Please verify to activate your account.")
+                return redirect('verify_teacher_signup_otp')
         else:
             messages.error(request, "Please correct the errors below.")
     else:
@@ -175,7 +178,7 @@ def login_view(request):
 
                 # Store session to verify later
                 request.session['pending_login_user_id'] = user.id
-                messages.info(request, "📧 OTP sent to your email. Please verify to complete login.")
+                messages.info(request, "OTP sent to your email. Please verify to complete login.")
                 return redirect('verify_teacher_login_otp')
 
             elif getattr(user, "is_student", False):
@@ -189,14 +192,14 @@ def login_view(request):
                 return redirect('home')
 
         else:
-            messages.error(request, "❌ Invalid username, student ID, or password.")
+            messages.error(request, "Invalid username, student ID, or password.")
 
     return render(request, "accounts/login.html")
 
 # 🚪 LOGOUT
 def logout_view(request):
     django_logout(request)
-    messages.info(request, "👋 You have been logged out successfully.")
+    messages.info(request, "You have been logged out successfully.")
     return redirect('home')
 
 
@@ -226,10 +229,10 @@ def verify_teacher_signup_otp(request):
 
             # ✅ Auto-login after verification
             login(request, user)
-            messages.success(request, f"✅ Welcome, {user.username}! Your account is verified and active.")
+            messages.success(request, f"Welcome, {user.username}! Your account is verified and active.")
             return redirect('teacher_dashboard') # Assumes this is in another app's urls
         else:
-            messages.error(request, "❌ Invalid OTP. Please try again.")
+            messages.error(request, "Invalid OTP. Please try again.")
 
     return render(request, 'accounts/verify_teacher_otp.html', {'email': user.email})
 
@@ -255,10 +258,10 @@ def verify_teacher_login_otp(request):
             # ✅ Log in teacher and clean session
             login(request, user)
             del request.session['pending_login_user_id']
-            messages.success(request, f"✅ Welcome back, {user.username}!")
+            messages.success(request, f"Welcome back, {user.username}!")
             return redirect('teacher_dashboard') # Assumes this is in another app's urls
         else:
-            messages.error(request, "❌ Invalid OTP. Please try again.")
+            messages.error(request, "Invalid OTP. Please try again.")
 
     return render(request, 'accounts/verify_teacher_otp.html', {'email': user.email})
 
@@ -270,7 +273,7 @@ def set_language(request):
         if lang in ["en", "kn", "hi"]:
             request.session["django_language"] = lang
             translation.activate(lang)
-            messages.success(request, f"🌐 Language changed to {lang.upper()}")
+            messages.success(request, f"Language changed to {lang.upper()}")
         else:
             messages.error(request, "Invalid language selected.")
     return redirect(request.META.get("HTTP_REFERER", "home"))
@@ -284,12 +287,67 @@ def settings_page(request):
     """Renders the user settings page."""
     return render(request, 'accounts/settings.html')
 
-# 👇 Decorator REMOVED. This page is now public.
 def help_center_page(request):
     """Renders the help center page."""
     return render(request, 'accounts/help_center.html')
 
-# 👇 Decorator REMOVED. This page is now public.
 def faq_page(request):
     """Renders the FAQ page."""
     return render(request, 'accounts/faq.html')
+
+
+# --- 4. NEW PROFILE VIEWS ---
+
+@login_required
+def student_profile(request):
+    """Displays the logged-in student's own profile page."""
+    if not request.user.is_student:
+        return redirect('home') # Or some error page
+    
+    profile = request.user.student_profile
+    context = {
+        'profile': profile
+    }
+    return render(request, 'accounts/student_profile.html', context)
+
+
+@login_required
+def edit_student_profile(request):
+    """Handles the form for a student to edit their own profile."""
+    if not request.user.is_student:
+        return redirect('home')
+        
+    profile = request.user.student_profile
+    
+    if request.method == 'POST':
+        # Pass instance=profile to update the existing profile
+        form = StudentProfileEditForm(request.POST, request.FILES, instance=profile)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Your profile has been updated successfully!')
+            return redirect('student_profile')
+        else:
+            messages.error(request, 'Please correct the errors below.')
+    else:
+        # Pre-populate the form with existing data
+        form = StudentProfileEditForm(instance=profile)
+
+    context = {
+        'form': form
+    }
+    return render(request, 'accounts/edit_student_profile.html', context)
+
+
+@login_required
+def teacher_view_student_profile(request, student_code):
+    """Allows a teacher to view a specific student's profile."""
+    if not request.user.is_teacher:
+        return redirect('home') # Only teachers can access this
+    
+    # Ensure the teacher can only see students in their own school
+    profile = get_object_or_404(StudentProfile, student_code=student_code, user__school=request.user.school)
+    
+    context = {
+        'profile': profile
+    }
+    return render(request, 'accounts/teacher_view_student_profile.html', context)

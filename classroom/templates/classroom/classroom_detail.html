@@ -4,19 +4,18 @@
 {% block title %}{{ vc.class_name }} - {{ vc.section|upper }}{% endblock %}
 
 {% block content %}
-<div classs="card animate-fade-in-up">
-    <div class="page-header">
+<div class="card animate-fade-in-up" style="padding: 2.5rem;"> <div class="page-header">
         <div>
-            <h2 class="text-gradient">🏫 {{ vc.class_name }} - {{ vc.section|upper }}</h2>
+            <h2 class="text-gradient">{{ vc.class_name }} - {{ vc.section|upper }}</h2>
             <p>{{ vc.school.name }} | {% trans "Total Students" %}: <strong>{{ students.count }}</strong></p>
         </div>
         <a href="{% url 'quick_checkup' vc.id %}" class="btn btn-primary" style="background: var(--color-warning); border-color: var(--color-warning);">
-            🩺 {% trans "Start Quick Checkup" %}
+            {% trans "Start Quick Checkup" %}
         </a>
     </div>
 
     <div class="form-group">
-        <label for="studentSearch" class="form-label">🔍 {% trans "Search Students" %}</label>
+        <label for="studentSearch" class="form-label">{% trans "Search Students" %}</label>
         <input type="text" id="studentSearch" class="form-control" placeholder="{% trans "Search by student name or roll number..." %}">
     </div>
 
@@ -39,7 +38,11 @@
           {% for s in students %}
           <tr class="student-row">
             <td>{{ s.roll_no }}</td>
-            <td>{{ s.user.first_name }} {{ s.user.last_name }}</td>
+            <td>
+                <a href="{% url 'teacher_view_student_profile' s.student_code %}">
+                    {{ s.user.get_full_name|default:s.user.username }}
+                </a>
+            </td>
             <td>{{ s.class_name }}</td>
             <td>{{ s.section }}</td>
             <td>{{ s.height_cm|default:"--" }}</td>
@@ -52,12 +55,11 @@
       </table>
     </div>
     {% else %}
-      <p class="text-center text-muted mt-4">{% trans "No students enrolled yet." %}</p>
+      <p classs="text-center text-muted mt-4">{% trans "No students enrolled yet." %}</p>
     {% endif %}
 </div>
 
 <style>
-    .card { padding: 2.5rem; } /* Extra padding for this page */
     .page-header {
         display: flex;
         justify-content: space-between;
@@ -75,8 +77,16 @@
     }
     
     /* Table Styling */
-    .table-wrapper { overflow-x: auto; border: 1px solid var(--color-border); border-radius: var(--border-radius); }
-    .data-table { width: 100%; border-collapse: collapse; text-align: left; }
+    .table-wrapper { 
+        overflow-x: auto; 
+        border: 1px solid var(--color-border); 
+        border-radius: var(--border-radius); 
+    }
+    .data-table { 
+        width: 100%; 
+        border-collapse: collapse; 
+        text-align: left; 
+    }
     .data-table th, .data-table td {
         padding: 0.9rem 1rem;
         border-bottom: 1px solid var(--color-border);
@@ -87,7 +97,16 @@
         background: var(--color-primary-light);
     }
     .data-table tr:last-child td { border-bottom: none; }
-    .data-table tr:hover { background: #fdfdff; }
+    .data-table tr:hover { background: var(--color-primary-light); }
+
+    /* Make the student name link look good in the table */
+    .data-table a {
+        font-weight: 600;
+        text-decoration: none;
+    }
+    .data-table a:hover {
+        text-decoration: underline;
+    }
 </style>
 {% endblock %}
 
