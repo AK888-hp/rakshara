@@ -17,11 +17,11 @@
         <div class="hero-actions animate-fade-in-up" style="animation-delay: 0.4s;">
         {% if user.is_authenticated %}
             {% if user.is_student %}
-                <a href="{% url 'student_dashboard' %}" class="btn btn-primary">
+                <a href="{% url 'health:student_dashboard' %}" class="btn btn-primary">
                     {% trans "Go to Student Dashboard" %}
                 </a>
             {% elif user.is_teacher %}
-                <a href="{% url 'teacher_dashboard' %}" class="btn btn-primary">
+                <a href="{% url 'health:teacher_dashboard' %}" class="btn btn-primary">
                     {% trans "Go to Teacher Dashboard" %}
                 </a>
             {% endif %}
@@ -215,7 +215,7 @@
         margin-top: 3rem;
     }
     .feature-card {
-        background: #fff;
+        background: var(--color-surface);
         padding: 2rem;
         border-radius: var(--border-radius);
         box-shadow: var(--shadow-sm);
@@ -235,7 +235,6 @@
     /* Team Grid */
     .team-grid {
         display: grid;
-        /* Updated grid to handle 4 items cleanly */
         grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
         gap: 2rem;
         margin-top: 3rem;
