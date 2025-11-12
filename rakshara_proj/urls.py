@@ -1,11 +1,15 @@
 from django.contrib import admin
 from django.urls import path, include
-from django.conf import settings               # <-- 1. IMPORT
-from django.conf.urls.static import static     # <-- 2. IMPORT
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('', include('accounts.urls')),  # ✅ this ensures '/' goes to home()
-    path('classroom/', include('classroom.urls')),
+    
+    # This includes login, register, home, etc.
+    path('', include('accounts.urls')), 
+    
+    # This line is FIXED to include the 'health' namespace
     path('health/', include(('health.urls', 'health'), namespace='health')),
+    
+    # This includes classroom_detail, approve, reject, etc.
+    path('classroom/', include('classroom.urls')),
 ]

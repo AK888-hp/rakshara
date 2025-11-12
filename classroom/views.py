@@ -1,22 +1,23 @@
-# classroom/views.py
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.conf import settings
 from django.core.mail import send_mail, BadHeaderError
 from smtplib import SMTPRecipientsRefused
-from ai_engine.utils import predict_health
+
 from .models import VirtualClassroom
 from health.models import VitalRecord
 from accounts.models import StudentProfile, Notification, User, JoinRequest
+from ai_engine.utils import predict_health
 
-from django.db.models import Avg, Count, Case, When, Prefetch  # <-- IMPORT PREFETCH
+from django.db.models import Avg, Count, Case, When, Prefetch
 from django.db.models.functions import TruncDay
 import json
 
 
-# Redirect to the main dashboard in the 'health' app
-
+# --- THIS FUNCTION IS DELETED to prevent the infinite loop ---
+# def teacher_dashboard(request):
+#     return redirect('teacher_dashboard')
 
 
 @login_required
@@ -34,6 +35,8 @@ def approve_request(request, req_id):
     req.approved = True
     req.save()
     messages.success(request, f"{req.student.user.username} approved.")
+    
+    # --- FIXED REDIRECT ---
     return redirect('health:teacher_dashboard')
 
 
@@ -42,6 +45,8 @@ def reject_request(request, req_id):
     req = get_object_or_404(JoinRequest, id=req_id, teacher=request.user)
     req.delete()
     messages.warning(request, f"{req.student.user.username} request rejected.")
+    
+    # --- FIXED REDIRECT ---
     return redirect('health:teacher_dashboard')
 
 
@@ -64,17 +69,11 @@ def delete_student_from_class(request, student_id, class_id):
 
 @login_required
 def classroom_detail(request, pk):
-    """
-    Shows the roster for a class, PLUS:
-    1. A pie chart of current student health.
-    2. A line graph of average class health score over time.
-    """
     if not request.user.is_teacher:
         return redirect('home')
     
     vc = get_object_or_404(VirtualClassroom, id=pk, teacher=request.user)
     
-    # --- PIE CHART DATA (FIXED) ---
     latest_vitals_prefetch = Prefetch(
         'vitals',
         queryset=VitalRecord.objects.order_by('-recorded_at'),
@@ -82,7 +81,6 @@ def classroom_detail(request, pk):
     )
     students = vc.students.all().select_related('user').prefetch_related(latest_vitals_prefetch)
 
-    # NEW: Robust status counting
     status_counts = {
         "Healthy": 0,
         "Watch": 0,
@@ -102,7 +100,6 @@ def classroom_detail(request, pk):
             elif "high risk" in label or "critical" in label:
                 status_counts["Risk"] += 1
             else:
-                # Fallback for any other non-empty label
                 status_counts["Risk"] += 1 
         else:
             status_counts["Not Yet Checked"] += 1
@@ -117,7 +114,6 @@ def classroom_detail(request, pk):
         ],
     }
 
-    # --- 2. LINE GRAPH DATA (Class Average) ---
     all_vitals = VitalRecord.objects.filter(student__in=students)
 
     avg_health_over_time = all_vitals.annotate(
@@ -139,11 +135,9 @@ def classroom_detail(request, pk):
     }
     return render(request, 'classroom/classroom_detail.html', context)
 
+
 @login_required
 def quick_checkup(request, pk):
-    """
-    Handles the multi-step form for a teacher to quickly check student vitals.
-    """
     if not request.user.is_teacher:
         return redirect('home')
 
@@ -155,11 +149,10 @@ def quick_checkup(request, pk):
         idx = int(request.GET.get('idx', 0))
         student_profile = students[idx]
     except (IndexError, ValueError):
-        messages.success(request, "✅ Quick checkup completed for all students.")
+        messages.success(request, "Quick checkup completed for all students.")
         return redirect('classroom_detail', pk=pk)
 
     if request.method == 'POST':
-        # --- Handle Alert Sending ---
         if 'alert' in request.POST:
             parent_email = student_profile.parent_contact
             if parent_email:
@@ -173,7 +166,7 @@ def quick_checkup(request, pk):
                         f"- Rakshara System"
                     )
                     send_mail(subject, message, settings.EMAIL_HOST_USER, [parent_email])
-                    messages.success(request, f"📧 Alert sent to {parent_email} for {student_profile.user.get_full_name()}.")
+                    messages.success(request, f"Alert sent to {parent_email} for {student_profile.user.get_full_name()}.")
                 
                 except (SMTPRecipientsRefused, BadHeaderError):
                     return render(request, 'classroom/quick_check.html', {
@@ -188,7 +181,6 @@ def quick_checkup(request, pk):
             
             return redirect(f"{request.path_info}?idx={idx + 1}")
 
-        # --- Handle Vital Submission ---
         else:
             hr = int(request.POST.get('heart_rate'))
             spo2 = float(request.POST.get('spo2'))
@@ -227,7 +219,6 @@ def quick_checkup(request, pk):
                 'prediction_score': score,
             })
 
-    # Standard GET request
     return render(request, 'classroom/quick_check.html', {
         'vc': vc,
         'student': student_profile,
@@ -235,18 +226,15 @@ def quick_checkup(request, pk):
         'total': total_students
     })
 
+
 @login_required
 def view_student_history(request, student_id):
-    """
-    Shows a specific student's profile and health history (for teachers).
-    """
     if not request.user.is_teacher:
         return redirect('home')
 
     student = get_object_or_404(StudentProfile, id=student_id, user__school=request.user.school)
     
-    # Get vitals for the chart
-    vitals_qs = student.vitals.all().order_by('recorded_at') # Chronological
+    vitals_qs = student.vitals.all().order_by('recorded_at')
     
     line_chart_data = {
         "labels": [v.recorded_at.strftime("%d %b %H:%M") for v in vitals_qs],
@@ -257,20 +245,17 @@ def view_student_history(request, student_id):
     
     context = {
         'profile': student,
-        'vitals': vitals_qs.reverse(), # Show newest first in table
+        'vitals': vitals_qs.reverse(),
         'line_chart_data_json': json.dumps(line_chart_data)
     }
     return render(request, 'classroom/student_history.html', context)
 
+
 @login_required
 def delete_classroom(request, pk):
-    """
-    Deletes an entire virtual classroom.
-    """
     if not request.user.is_teacher:
         return redirect('home')
     
-    # Ensure the teacher deleting the class is the one who owns it
     vc = get_object_or_404(VirtualClassroom, id=pk, teacher=request.user)
     
     if request.method == 'POST':
@@ -278,8 +263,9 @@ def delete_classroom(request, pk):
         section = vc.section
         vc.delete()
         messages.success(request, f"Class {class_name}-{section} has been permanently deleted.")
-        return redirect('teacher_dashboard')
+        # --- FIXED REDIRECT ---
+        return redirect('health:teacher_dashboard')
     
-    # If not POST, just redirect back (or show a confirmation page)
     messages.error(request, "Invalid request.")
-    return redirect('teacher_dashboard')
+    # --- FIXED REDIRECT ---
+    return redirect('health:teacher_dashboard')
