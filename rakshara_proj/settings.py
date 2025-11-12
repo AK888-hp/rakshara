@@ -136,6 +136,7 @@ LOGIN_URL = 'login'
 
 EMAIL_BACKEND = 'sendgrid_backend.SendgridBackend'
 SENDGRID_API_KEY = os.environ.get('SENDGRID_API_KEY')
+#SENDGRID_API_KEY = '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'
 # DEFAULT_FROM_EMAIL is still read from EMAIL_HOST_USER, which is correct
 DEFAULT_FROM_EMAIL = os.environ.get('EMAIL_HOST_USER')
 EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER')
