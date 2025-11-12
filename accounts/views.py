@@ -1,7 +1,7 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth import login, authenticate
 from django.contrib import messages
-from .forms import StudentSignUpForm, TeacherSignUpForm, StudentProfileEditForm # <-- IMPORT NEW FORM
+from .forms import StudentSignUpForm, TeacherSignUpForm, StudentProfileEditForm
 from .models import School, StudentProfile, User, TeacherProfile, Notification, JoinRequest
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth import logout as django_logout
@@ -18,8 +18,7 @@ from django.utils import translation
 # 🧩 STUDENT REGISTRATION
 def student_register(request):
     if request.method == "POST":
-        # --- Pass request.FILES to the form ---
-        form = StudentSignUpForm(request.POST, request.FILES)
+        form = StudentSignUpForm(request.POST) 
         if form.is_valid():
             user = form.save(commit=False)
             user.is_student = True
@@ -33,7 +32,6 @@ def student_register(request):
             profile.weight_kg = form.cleaned_data.get('weight_kg')
             profile.personal_contact = form.cleaned_data.get('personal_contact')
             
-        
             parent_email = request.POST.get('parent_email')
             if parent_email:
                 profile.parent_contact = parent_email.strip()
@@ -42,8 +40,6 @@ def student_register(request):
             profile.class_name = form.cleaned_data.get('class_name')
             profile.section = form.cleaned_data.get('section')
             profile.save()
-
-            # ... (rest of the view is unchanged) ...
             
             teachers = TeacherProfile.objects.filter(user__school=user.school)
             found = False
@@ -80,7 +76,8 @@ def student_register(request):
                 request,
                 f"Account created successfully! Your Student ID: {profile.student_code}"
             )
-            return redirect('student_dashboard') # Assumes this is in another app's urls
+            # --- FIX 1 ---
+            return redirect('health:student_dashboard')
         else:
             messages.error(request, "Please correct the errors below.")
     else:
@@ -88,7 +85,6 @@ def student_register(request):
 
     return render(request, 'accounts/student_register.html', {'form': form})
 
-# ... (teacher_register, home, login_view, logout_view, OTP views, set_language... all unchanged) ...
 # 🧩 TEACHER REGISTRATION
 def teacher_register(request):
     if request.method == "POST":
@@ -103,17 +99,15 @@ def teacher_register(request):
                 user = form.save(commit=False)
                 user.is_teacher = True
                 user.school = school
-                user.is_active = False  # ⛔ deactivate until OTP verified
+                user.is_active = False
                 user.save()
 
-                # Save profile details
                 profile = user.teacher_profile
                 profile.contact = form.cleaned_data.get('contact')
                 profile.address = form.cleaned_data.get('address')
                 profile.verification_id = verification_id
                 profile.save()
 
-                # ✅ Generate and send OTP
                 otp = user.generate_otp()
                 subject = "Teacher Account Verification OTP"
                 message = f"Dear {user.username},\n\nYour OTP for verification is: {otp}\n\nPlease enter this to activate your account."
@@ -134,9 +128,11 @@ def home(request):
     user = request.user
     if user.is_authenticated:
         if getattr(user, "is_teacher", False):
-            return redirect('teacher_dashboard') # Assumes this is in another app's urls
+            # --- FIX 2 ---
+            return redirect('health:teacher_dashboard')
         elif getattr(user, "is_student", False):
-            return redirect('student_dashboard') # Assumes this is in another app's urls
+            # --- FIX 3 ---
+            return redirect('health:student_dashboard')
     return render(request, 'home.html')
 
 
@@ -147,11 +143,8 @@ def login_view(request):
         password = request.POST.get("password")
 
         user = None
-
-        # 1️⃣ Try authenticating with username
         user = authenticate(request, username=username_or_id, password=password)
 
-        # 2️⃣ If failed, check if it's a student ID
         if user is None:
             from accounts.models import StudentProfile
             try:
@@ -160,31 +153,26 @@ def login_view(request):
             except StudentProfile.DoesNotExist:
                 user = None
 
-        # 3️⃣ If user found
         if user is not None:
             if getattr(user, "is_teacher", False):
-                # ✅ Generate OTP for teachers
                 otp = str(random.randint(100000, 999999))
                 user.otp = otp
                 user.save()
 
-                # Send OTP via email
                 subject = "Login Verification OTP"
                 message = f"Dear {user.username},\n\nYour OTP for login is: {otp}\n\nUse this to complete your login."
                 send_mail(subject, message, settings.EMAIL_HOST_USER, [user.email])
 
-                # Store session to verify later
                 request.session['pending_login_user_id'] = user.id
                 messages.info(request, "OTP sent to your email. Please verify to complete login.")
                 return redirect('verify_teacher_login_otp')
 
             elif getattr(user, "is_student", False):
-                # ✅ Students log in directly (no OTP)
                 login(request, user)
                 messages.success(request, f"Welcome back, {user.username}!")
-                return redirect('student_dashboard') # Assumes this is in another app's urls
+                # --- FIX 4 ---
+                return redirect('health:student_dashboard')
             else:
-                # Generic fallback for admins
                 login(request, user)
                 return redirect('home')
 
@@ -204,7 +192,6 @@ def logout_view(request):
 # 🔐 VERIFY OTP (Teacher Signup)
 # -----------------------------------------
 def verify_teacher_signup_otp(request):
-    """Handles OTP verification for newly registered teachers."""
     teacher_id = request.session.get('pending_teacher_id')
     if not teacher_id:
         messages.error(request, "No registration in progress.")
@@ -215,19 +202,15 @@ def verify_teacher_signup_otp(request):
     if request.method == "POST":
         entered_otp = request.POST.get("otp")
         if entered_otp == user.otp:
-            # ✅ Activate teacher account
             user.is_active = True
             user.is_verified = True
             user.otp = None
             user.save()
-
-            # ✅ Remove pending session
             del request.session['pending_teacher_id']
-
-            # ✅ Auto-login after verification
             login(request, user)
             messages.success(request, f"Welcome, {user.username}! Your account is verified and active.")
-            return redirect('teacher_dashboard') # Assumes this is in another app's urls
+            # --- FIX 5 ---
+            return redirect('health:teacher_dashboard')
         else:
             messages.error(request, "Invalid OTP. Please try again.")
 
@@ -238,7 +221,6 @@ def verify_teacher_signup_otp(request):
 # 🔐 VERIFY OTP (Teacher Login)
 # -----------------------------------------
 def verify_teacher_login_otp(request):
-    """Handles OTP verification for teachers during login."""
     user_id = request.session.get('pending_login_user_id')
     if not user_id:
         messages.error(request, "No OTP verification in progress.")
@@ -251,12 +233,11 @@ def verify_teacher_login_otp(request):
         if entered_otp == user.otp:
             user.otp = None
             user.save()
-
-            # ✅ Log in teacher and clean session
             login(request, user)
             del request.session['pending_login_user_id']
             messages.success(request, f"Welcome back, {user.username}!")
-            return redirect('teacher_dashboard') # Assumes this is in another app's urls
+            # --- FIX 6 ---
+            return redirect('health:teacher_dashboard')
         else:
             messages.error(request, "Invalid OTP. Please try again.")
 
@@ -264,7 +245,6 @@ def verify_teacher_login_otp(request):
 
 # 🌐 LANGUAGE SWITCHER VIEW
 def set_language(request):
-    """Update user's language preference and reload page."""
     if request.method == "POST":
         lang = request.POST.get("language", "en")
         if lang in ["en", "kn", "hi"]:
@@ -281,15 +261,12 @@ def set_language(request):
 # -----------------------------------------
 
 def settings_page(request):
-    """Renders the user settings page."""
     return render(request, 'accounts/settings.html')
 
 def help_center_page(request):
-    """Renders the help center page."""
     return render(request, 'accounts/help_center.html')
 
 def faq_page(request):
-    """Renders the FAQ page."""
     return render(request, 'accounts/faq.html')
 
 
@@ -297,9 +274,8 @@ def faq_page(request):
 
 @login_required
 def student_profile(request):
-    """Displays the logged-in student's own profile page."""
     if not request.user.is_student:
-        return redirect('home') # Or some error page
+        return redirect('home')
     
     profile = request.user.student_profile
     context = {
@@ -310,14 +286,13 @@ def student_profile(request):
 
 @login_required
 def edit_student_profile(request):
-    """Handles the form for a student to edit their own profile."""
     if not request.user.is_student:
         return redirect('home')
         
     profile = request.user.student_profile
     
     if request.method == 'POST':
-        # Pass instance=profile to update the existing profile
+        form = StudentProfileEditForm(request.POST, instance=profile)
         if form.is_valid():
             form.save()
             messages.success(request, 'Your profile has been updated successfully!')
@@ -325,7 +300,6 @@ def edit_student_profile(request):
         else:
             messages.error(request, 'Please correct the errors below.')
     else:
-        # Pre-populate the form with existing data
         form = StudentProfileEditForm(instance=profile)
 
     context = {
@@ -336,11 +310,9 @@ def edit_student_profile(request):
 
 @login_required
 def teacher_view_student_profile(request, student_code):
-    """Allows a teacher to view a specific student's profile."""
     if not request.user.is_teacher:
-        return redirect('home') # Only teachers can access this
+        return redirect('home')
     
-    # Ensure the teacher can only see students in their own school
     profile = get_object_or_404(StudentProfile, student_code=student_code, user__school=request.user.school)
     
     context = {
