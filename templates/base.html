@@ -332,9 +332,9 @@
                 
                 {% if user.is_authenticated %}
                     {% if user.is_student %}
-                        <a href="{% url 'student_dashboard' %}" class="active">{% trans "Dashboard" %}</a>
+                        <a href="{% url 'health:student_dashboard' %}" class="active">{% trans "Dashboard" %}</a>
                     {% elif user.is_teacher %}
-                        <a href="{% url 'teacher_dashboard' %}" class="active">{% trans "Dashboard" %}</a>
+                        <a href="{% url 'health:teacher_dashboard' %}" class="active">{% trans "Dashboard" %}</a>
                     {% endif %}
                     <a href="{% url 'logout' %}">{% trans "Logout" %}</a>
 
@@ -390,35 +390,28 @@
     <script>
         // --- 3. THEME TOGGLING LOGIC ---
         (function() {
-            // Function to apply the theme
             function applyTheme(theme) {
                 document.documentElement.setAttribute('data-theme', theme);
                 localStorage.setItem('theme', theme);
             }
-
-            // Function to toggle the theme
             window.toggleTheme = function() {
                 const currentTheme = localStorage.getItem('theme') || 'light';
                 const newTheme = currentTheme === 'light' ? 'dark' : 'light';
                 applyTheme(newTheme);
             }
-
-            // Apply the theme on initial load
             const savedTheme = localStorage.getItem('theme');
             const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
-
             if (savedTheme) {
                 applyTheme(savedTheme);
             } else if (prefersDark) {
                 applyTheme('dark');
             } else {
-                applyTheme('light'); // Default
+                applyTheme('light');
             }
         })();
     </script>
 
     <script>
-        // This script runs *after* the DOM is loaded
         document.addEventListener('DOMContentLoaded', function() {
             
             // --- Loading Overlay Script ---
@@ -474,11 +467,9 @@
 
                 if (menuBtn && menuContent) {
                     menuBtn.addEventListener('click', (e) => {
-                        e.stopPropagation(); // Don't let the click bubble to the document
+                        e.stopPropagation();
                         menuContent.style.display = menuContent.style.display === 'block' ? 'none' : 'block';
                     });
-
-                    // Close menu if clicking outside
                     document.addEventListener('click', (e) => {
                         if (menuContent.style.display === 'block' && !menuDropdown.contains(e.target)) {
                             menuContent.style.display = 'none';

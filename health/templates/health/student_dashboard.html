@@ -9,7 +9,6 @@
         <h2>{{ profile.user.get_full_name|default:profile.user.username }}'s {% trans "Dashboard" %}</h2>
         <p>{% trans "Student ID" %}: <strong>{{ profile.student_code }}</strong></p>
     </div>
-    
     <a href="{% url 'student_profile' %}" class="profile-btn" title="{% trans 'View Profile' %}">
         <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
     </a>
@@ -36,7 +35,7 @@
     </div>
     
     <div class="add-vitals-container">
-        <a href="{% url 'add_vital' %}" class="btn btn-success">
+        <a href="{% url 'health:add_vital' %}" class="btn btn-success">
             {% trans "Add New Vitals" %}
         </a>
     </div>
@@ -129,7 +128,6 @@
         text-decoration: none;
         box-shadow: var(--shadow-sm);
     }
-    /* img style removed */
     
     .summary-grid {
         display: grid;
@@ -191,9 +189,9 @@
     .data-table tr:hover { background: var(--color-primary-light); }
     
     /* Status colors */
-    .status-critical, .status-high { color: var(--color-danger); font-weight: 700; }
-    .status-mild, .status-moderate { color: var(--color-warning); font-weight: 600; }
-    .status-healthy { color: var(--color-success); }
+    .status-critical, .status-high, .status-risk { color: var(--color-danger); font-weight: 700; }
+    .status-mild, .status-moderate, .status-watch { color: var(--color-warning); font-weight: 600; }
+    .status-healthy, .status-normal { color: var(--color-success); }
 
 
     /* --- Modal Styles --- */

@@ -7,21 +7,21 @@
 <div class="card animate-fade-in-up profile-card">
     <div class="profile-header">
         <div class="profile-avatar">
-            {% if profile.image %}
-                <img src="{{ profile.image.url }}" alt="Profile Picture">
-            {% else %}
-                <div class="default-avatar">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="60" height="60" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
-                </div>
-            {% endif %}
+            <div class="default-avatar">
+                <svg xmlns="http://www.w3.org/2000/svg" width="60" height="60" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                    <circle cx="12" cy="7" r="4"></circle>
+                </svg>
+            </div>
         </div>
         <div class="profile-info">
             <h2 class="profile-name">{{ profile.user.get_full_name|default:profile.user.username }}</h2>
             <p class="profile-code">{% trans "Student ID" %}: {{ profile.student_code }}</p>
             <p class="profile-school">{% trans "Class" %}: {{ profile.class_name }}-{{ profile.section }}</p>
         </div>
-        <a href="{% url 'add_vital_for_student' profile.student_code %}" class="btn btn-success" style="margin-left: auto;">
-            {% trans "Measure Vitals" %}
+        <a href="{% url 'health:add_vital_for_student' profile.student_code %}" class="btn btn-success"
+            style="margin-left: auto;"> {% trans "Measure Vitals" %}
         </a>
     </div>
 
@@ -61,7 +61,8 @@
                 </tr>
                 {% empty %}
                 <tr>
-                    <td colspan="6" style="text-align: center; padding: 2rem;">{% trans "No health records found for this student." %}</td>
+                    <td colspan="6" style="text-align: center; padding: 2rem;">{% trans "No health records found for
+                        this student." %}</td>
                 </tr>
                 {% endfor %}
             </tbody>
@@ -71,15 +72,19 @@
 
 <style>
     /* Profile Header */
-    .profile-card { max-width: 1000px; margin: 0 auto; padding: 2.5rem; }
-    .profile-header { display: flex; align-items: center; gap: 2rem; flex-wrap: wrap; }
-    .profile-avatar img {
-        width: 120px;
-        height: 120px;
-        border-radius: 50%;
-        object-fit: cover;
-        border: 4px solid var(--color-border);
+    .profile-card {
+        max-width: 1000px;
+        margin: 0 auto;
+        padding: 2.5rem;
     }
+
+    .profile-header {
+        display: flex;
+        align-items: center;
+        gap: 2rem;
+        flex-wrap: wrap;
+    }
+
     .default-avatar {
         width: 120px;
         height: 120px;
@@ -88,15 +93,42 @@
         place-items: center;
         background-color: var(--color-primary-light);
         color: var(--color-primary);
+        flex-shrink: 0;
     }
-    .profile-name { font-size: 2rem; margin-bottom: 0.25rem; color: var(--color-text); }
-    .profile-code { font-size: 1rem; color: var(--color-text-muted); margin-bottom: 0.25rem; }
-    .profile-school { font-size: 1.1rem; color: var(--color-primary); font-weight: 600; margin: 0; }
-    
+
+    .profile-name {
+        font-size: 2rem;
+        margin-bottom: 0.25rem;
+        color: var(--color-text);
+    }
+
+    .profile-code {
+        font-size: 1rem;
+        color: var(--color-text-muted);
+        margin-bottom: 0.25rem;
+    }
+
+    .profile-school {
+        font-size: 1.1rem;
+        color: var(--color-primary);
+        font-weight: 600;
+        margin: 0;
+    }
+
     /* Dividers and Titles */
-    .content-divider { margin: 2.5rem 0; border: 0; border-top: 1px solid var(--color-border); }
-    .section-title { font-size: 1.75rem; font-weight: 700; color: var(--color-text); margin-bottom: 1.5rem; }
-    
+    .content-divider {
+        margin: 2.5rem 0;
+        border: 0;
+        border-top: 1px solid var(--color-border);
+    }
+
+    .section-title {
+        font-size: 1.75rem;
+        font-weight: 700;
+        color: var(--color-text);
+        margin-bottom: 1.5rem;
+    }
+
     /* Chart Container */
     .chart-container {
         position: relative;
@@ -104,119 +136,151 @@
         height: 350px;
         padding: 1rem;
     }
-    
+
     /* Table Styling */
-    .table-wrapper { 
-        overflow-x: auto; 
-        border: 1px solid var(--color-border); 
-        border-radius: var(--border-radius); 
+    .table-wrapper {
+        overflow-x: auto;
+        border: 1px solid var(--color-border);
+        border-radius: var(--border-radius);
     }
-    .data-table { width: 100%; border-collapse: collapse; text-align: left; }
-    .data-table th, .data-table td {
+
+    .data-table {
+        width: 100%;
+        border-collapse: collapse;
+        text-align: left;
+    }
+
+    .data-table th,
+    .data-table td {
         padding: 0.9rem 1rem;
         border-bottom: 1px solid var(--color-border);
         vertical-align: middle;
         text-align: center;
     }
-    .data-table th { font-weight: 600; background: var(--color-primary-light); }
-    .data-table tr:last-child td { border-bottom: none; }
-    .data-table tr:hover { background: var(--color-primary-light); }
-    
+
+    .data-table th {
+        font-weight: 600;
+        background: var(--color-primary-light);
+    }
+
+    .data-table tr:last-child td {
+        border-bottom: none;
+    }
+
+    .data-table tr:hover {
+        background: var(--color-primary-light);
+    }
+
     /* Status colors */
-    .status-critical, .status-high, .status-risk { color: var(--color-danger); font-weight: 700; }
-    .status-mild, .status-moderate, .status-watch { color: var(--color-warning); font-weight: 600; }
-    .status-healthy, .status-normal { color: var(--color-success); }
+    .status-critical,
+    .status-high,
+    .status-risk {
+        color: var(--color-danger);
+        font-weight: 700;
+    }
+
+    .status-mild,
+    .status-moderate,
+    .status-watch {
+        color: var(--color-warning);
+        font-weight: 600;
+    }
+
+    .status-healthy,
+    .status-normal {
+        color: var(--color-success);
+    }
 </style>
 {% endblock %}
 
 {% block scripts %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
-document.addEventListener("DOMContentLoaded", () => {
-    // --- Chart.js ---
-    const lineData = {{ line_chart_data_json|safe }};
-    const lineCtx = document.getElementById('healthChart');
-    
-    if (lineCtx && lineData.labels.length > 0) {
-        // Get theme colors from CSS variables
-        const dangerColor = getComputedStyle(document.documentElement).getPropertyValue('--color-danger').trim();
-        const successColor = getComputedStyle(document.documentElement).getPropertyValue('--color-success').trim();
-        const primaryColor = getComputedStyle(document.documentElement).getPropertyValue('--color-primary').trim();
-        const textColor = getComputedStyle(document.documentElement).getPropertyValue('--color-text-muted').trim();
-        const gridColor = getComputedStyle(document.documentElement).getPropertyValue('--color-border').trim();
-        const pointBg = getComputedStyle(document.documentElement).getPropertyValue('--color-surface').trim();
+    document.addEventListener("DOMContentLoaded", () => {
+        // --- Chart.js ---
+        const lineData = {{ line_chart_data_json|safe }};
+        const lineCtx = document.getElementById('healthChart');
 
-        new Chart(lineCtx, {
-            type: 'line',
-            data: {
-                labels: lineData.labels,
-                datasets: [
-                    {
-                        label: 'Heart Rate (bpm)',
-                        data: lineData.hr_data,
-                        borderColor: dangerColor,
-                        fill: false,
-                        tension: 0.4,
-                        borderWidth: 3
-                    },
-                    {
-                        label: 'SpO₂ (%)',
-                        data: lineData.spo2_data,
-                        borderColor: successColor,
-                        fill: false,
-                        tension: 0.4,
-                        borderWidth: 3
-                    },
-                    {
-                        label: 'Temperature (°C)',
-                        data: lineData.temp_data,
-                        borderColor: primaryColor,
-                        fill: false,
-                        tension: 0.4,
-                        borderWidth: 3
-                    }
-                ]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: { 
-                    legend: { 
-                        position: 'top',
-                        labels: { color: textColor, usePointStyle: true, pointStyle: 'circle' }
-                    } 
+        if (lineCtx && lineData.labels.length > 0) {
+            // Get theme colors from CSS variables
+            const dangerColor = getComputedStyle(document.documentElement).getPropertyValue('--color-danger').trim();
+            const successColor = getComputedStyle(document.documentElement).getPropertyValue('--color-success').trim();
+            const primaryColor = getComputedStyle(document.documentElement).getPropertyValue('--color-primary').trim();
+            const textColor = getComputedStyle(document.documentElement).getPropertyValue('--color-text-muted').trim();
+            const gridColor = getComputedStyle(document.documentElement).getPropertyValue('--color-border').trim();
+            const pointBg = getComputedStyle(document.documentElement).getPropertyValue('--color-surface').trim();
+
+            new Chart(lineCtx, {
+                type: 'line',
+                data: {
+                    labels: lineData.labels,
+                    datasets: [
+                        {
+                            label: 'Heart Rate (bpm)',
+                            data: lineData.hr_data,
+                            borderColor: dangerColor,
+                            fill: false,
+                            tension: 0.4,
+                            borderWidth: 3
+                        },
+                        {
+                            label: 'SpO₂ (%)',
+                            data: lineData.spo2_data,
+                            borderColor: successColor,
+                            fill: false,
+                            tension: 0.4,
+                            borderWidth: 3
+                        },
+                        {
+                            label: 'Temperature (°C)',
+                            data: lineData.temp_data,
+                            borderColor: primaryColor,
+                            fill: false,
+                            tension: 0.4,
+                            borderWidth: 3
+                        }
+                    ]
                 },
-                scales: {
-                    x: { 
-                        title: { display: true, text: 'Recorded Time', color: textColor },
-                        ticks: { color: textColor },
-                        grid: { color: gridColor }
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                            labels: { color: textColor, usePointStyle: true, pointStyle: 'circle' }
+                        }
                     },
-                    y: { 
-                        title: { display: true, text: 'Values', color: textColor },
-                        ticks: { color: textColor },
-                        grid: { color: gridColor }
-                    }
-                },
-                elements: {
-                    point: {
-                        radius: 5,
-                        backgroundColor: pointBg,
-                        borderWidth: 3,
-                        hoverRadius: 8,
-                        hoverBorderWidth: 3
+                    scales: {
+                        x: {
+                            title: { display: true, text: 'Recorded Time', color: textColor },
+                            ticks: { color: textColor },
+                            grid: { color: gridColor }
+                        },
+                        y: {
+                            title: { display: true, text: 'Values', color: textColor },
+                            ticks: { color: textColor },
+                            grid: { color: gridColor }
+                        }
+                    },
+                    elements: {
+                        point: {
+                            radius: 5,
+                            backgroundColor: pointBg,
+                            borderWidth: 3,
+                            hoverRadius: 8,
+                            hoverBorderWidth: 3
+                        }
                     }
                 }
-            }
-        });
-    } else if (lineCtx) {
-        // Fallback text if no data
-        const ctx = lineCtx.getContext('2d');
-        ctx.textAlign = 'center';
-        ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--color-text-muted').trim();
-        ctx.font = '16px ' + getComputedStyle(document.documentElement).getPropertyValue('--font-family');
-        ctx.fillText('{% trans "No health data yet to show a trend." %}', lineCtx.width / 2, lineCtx.height / 2);
-    }
-});
+            });
+        } else if (lineCtx) {
+            // Fallback text if no data
+            const ctx = lineCtx.getContext('2d');
+            ctx.textAlign = 'center';
+            ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--color-text-muted').trim();
+            ctx.font = '16px ' + getComputedStyle(document.documentElement).getPropertyValue('--font-family');
+            ctx.fillText('{% trans "No health data yet to show a trend." %}', lineCtx.width / 2, lineCtx.height / 2);
+        }
+    });
 </script>
 {% endblock %}

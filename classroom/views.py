@@ -16,9 +16,9 @@ from django.db.models.functions import TruncDay
 import json
 
 
-# --- THIS CONFLICTING VIEW IS NOW DELETED ---
-# def teacher_dashboard(request):
-#    ...
+# Redirect to the main dashboard in the 'health' app
+def teacher_dashboard(request):
+    return redirect('health:teacher_dashboard')
 
 
 @login_required
@@ -36,8 +36,6 @@ def approve_request(request, req_id):
     req.approved = True
     req.save()
     messages.success(request, f"{req.student.user.username} approved.")
-    
-    # --- FIXED REDIRECT ---
     return redirect('health:teacher_dashboard')
 
 
@@ -46,8 +44,6 @@ def reject_request(request, req_id):
     req = get_object_or_404(JoinRequest, id=req_id, teacher=request.user)
     req.delete()
     messages.warning(request, f"{req.student.user.username} request rejected.")
-    
-    # --- FIXED REDIRECT ---
     return redirect('health:teacher_dashboard')
 
 
@@ -70,53 +66,62 @@ def delete_student_from_class(request, student_id, class_id):
 
 @login_required
 def classroom_detail(request, pk):
+    """
+    Shows the roster for a class, PLUS:
+    1. A pie chart of current student health.
+    2. A line graph of average class health score over time.
+    """
     if not request.user.is_teacher:
         return redirect('home')
     
     vc = get_object_or_404(VirtualClassroom, id=pk, teacher=request.user)
-    
-    latest_vitals_prefetch = Prefetch(
-        'vitals',
-        queryset=VitalRecord.objects.order_by('-recorded_at'),
-        to_attr='latest_vitals_list'
-    )
-    students = vc.students.all().select_related('user').prefetch_related(latest_vitals_prefetch)
+    students = vc.students.all().select_related('user')
+    student_ids = students.values_list('id', flat=True)
 
+    # --- 1. GET ALL DATA IN ONE GO (FOR BOTH CHARTS) ---
+    all_vitals = VitalRecord.objects.filter(student_id__in=student_ids).order_by('student_id', '-recorded_at')
+
+    # --- 2. PIE CHART DATA (Python processing) ---
     status_counts = {
         "Healthy": 0,
         "Watch": 0,
         "Risk": 0,
-        "Not Yet Checked": 0
     }
+    
+    # Find the latest vital for each student in Python
+    latest_vitals_map = {}
+    for vital in all_vitals:
+        if vital.student_id not in latest_vitals_map:
+            # Since query is ordered by -recorded_at, the first one we see IS the latest
+            latest_vitals_map[vital.student_id] = vital
 
+    # Count the statuses
     for student in students:
-        if student.latest_vitals_list:
-            latest_vital = student.latest_vitals_list[0]
+        latest_vital = latest_vitals_map.get(student.id)
+        if latest_vital:
             label = latest_vital.prediction_label.lower()
-            
             if "healthy" in label or "normal" in label:
                 status_counts["Healthy"] += 1
             elif "watch" in label or "mild" in label or "moderate" in label:
                 status_counts["Watch"] += 1
             elif "high risk" in label or "critical" in label:
                 status_counts["Risk"] += 1
-            else:
-                status_counts["Risk"] += 1 
-        else:
-            status_counts["Not Yet Checked"] += 1
-            
+    
+    # Calculate "Not Yet Checked"
+    not_checked_count = len(students) - len(latest_vitals_map)
+
     pie_chart_data = {
         "labels": ["Healthy/Normal", "Watch/Mild", "High Risk/Critical", "Not Yet Checked"],
         "data": [
             status_counts["Healthy"],
             status_counts["Watch"],
             status_counts["Risk"],
-            status_counts["Not Yet Checked"]
+            not_checked_count
         ],
     }
 
-    all_vitals = VitalRecord.objects.filter(student__in=students)
-
+    # --- 3. LINE GRAPH DATA (Class Average) ---
+    # We use all_vitals, which we already know is working
     avg_health_over_time = all_vitals.annotate(
         day=TruncDay('recorded_at')
     ).values('day').annotate(
@@ -264,9 +269,7 @@ def delete_classroom(request, pk):
         section = vc.section
         vc.delete()
         messages.success(request, f"Class {class_name}-{section} has been permanently deleted.")
-        # --- FIXED REDIRECT ---
         return redirect('health:teacher_dashboard')
     
     messages.error(request, "Invalid request.")
-    # --- FIXED REDIRECT ---
     return redirect('health:teacher_dashboard')

@@ -88,20 +88,17 @@
         text-align: center;
         max-width: 400px;
         width: 90%;
-        /* NEW: Added status border */
         border-top: 5px solid var(--color-border);
     }
     
-    /* NEW: Modal Status Colors */
     .modal-card.status-healthy { border-top-color: var(--color-success); }
     .modal-card.status-mild { border-top-color: var(--color-warning); }
     .modal-card.status-critical { border-top-color: var(--color-danger); }
 
-    /* Removed .modal-emoji */
     .modal-title { 
         font-size: 1.75rem; 
         color: var(--color-text); 
-        margin-top: 0.5rem; /* Added margin */
+        margin-top: 0.5rem;
     }
     .modal-text { font-size: 1rem; color: var(--color-text-muted); }
     .modal-card .btn { width: 100%; margin-top: 1.5rem; }
@@ -116,7 +113,9 @@
       okBtn.addEventListener("click", () => {
         // Hide modal and redirect
         document.getElementById("resultModal").style.display = 'none';
-        window.location.href = "{% url 'student_dashboard' %}";
+        
+        // --- THIS IS THE FIX ---
+        window.location.href = "{% url 'health:student_dashboard' %}";
       });
     }
   });

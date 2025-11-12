@@ -141,3 +141,5 @@ SENDGRID_API_KEY = os.environ.get('SENDGRID_API_KEY')
 DEFAULT_FROM_EMAIL = os.environ.get('EMAIL_HOST_USER')
 EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER')
 DEFAULT_FROM_EMAIL = os.environ.get('EMAIL_HOST_USER', 'medteknie@gmail.com')
+
+#EMAIL_HOST_PASSWORD = 'vhywecaynaponmkc'

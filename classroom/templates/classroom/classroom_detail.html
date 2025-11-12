@@ -47,14 +47,13 @@
             </td>
             <td>{{ s.student_code }}</td>
             <td>{{ s.parent_contact|default:"--" }}</td>
-            
             <td class="action-buttons">
                 <a href="{% url 'view_student_history' student_id=s.id %}" 
                    class="btn btn-primary" 
                    style="--btn-size: small;">
                     {% trans "History" %}
                 </a>
-                <a href="{% url 'add_vital_for_student' s.student_code %}" 
+                <a href="{% url 'health:add_vital_for_student' s.student_code %}" 
                    class="btn btn-success" 
                    style="--btn-size: small;">
                     {% trans "Measure" %}
@@ -66,7 +65,7 @@
                     {% trans "Remove" %}
                 </a>
             </td>
-            </tr>
+          </tr>
           {% endfor %}
         </tbody>
       </table>
@@ -180,7 +179,6 @@
         font-size: 0.85rem;
     }
 
-    /* Style for the new button group */
     .action-buttons {
         display: flex;
         gap: 0.5rem;
@@ -216,7 +214,11 @@ document.addEventListener("DOMContentLoaded", () => {
     // --- 1. Pie Chart ---
     const pieData = {{ pie_chart_data_json|safe }};
     const pieCtx = document.getElementById('pieChart');
-    if (pieCtx && pieData.data.some(v => v > 0)) {
+    
+    // Check if there is any data to show
+    const hasPieData = pieData.data.some(v => v > 0);
+
+    if (pieCtx && hasPieData) {
         new Chart(pieCtx, {
             type: 'doughnut',
             data: {
@@ -260,7 +262,11 @@ document.addEventListener("DOMContentLoaded", () => {
     // --- 2. Line Chart ---
     const lineData = {{ line_chart_data_json|safe }};
     const lineCtx = document.getElementById('lineChart');
-    if (lineCtx && lineData.data.length > 0) {
+    
+    // Check if there is any data to show
+    const hasLineData = lineData.data.length > 0;
+
+    if (lineCtx && hasLineData) {
         new Chart(lineCtx, {
             type: 'line',
             data: {
