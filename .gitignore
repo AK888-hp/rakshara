@@ -1,0 +1,18 @@
+# Virtual Environment
+venv/
+
+# Local Database
+db.sqlite3
+
+# Python cache files
+__pycache__/
+*.pyc
+
+# Environment variables file
+.env
+
+# User-uploaded media files
+media/
+
+# Staticfiles directory (built by collectstatic)
+staticfiles/

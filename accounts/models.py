@@ -36,7 +36,6 @@ class User(AbstractUser):
 # ---------------------- Student Profile ----------------------
 class StudentProfile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='student_profile')
-    image = models.ImageField(upload_to='profile_pics/', null=True, blank=True)
     roll_no = models.CharField(max_length=50)
     dob = models.DateField(null=True, blank=True)
     height_cm = models.FloatField(null=True, blank=True)

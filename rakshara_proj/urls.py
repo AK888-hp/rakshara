@@ -11,5 +11,3 @@ urlpatterns = [
     path('health/', include('health.urls')),
     path('set-language/', set_language, name='set_language'),
 ]
-if settings.DEBUG:
-    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

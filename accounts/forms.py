@@ -15,9 +15,6 @@ class StudentSignUpForm(UserCreationForm):
     class_name = forms.CharField(required=True)
     section = forms.CharField(required=True)
     
-    # --- ADD THIS LINE ---
-    image = forms.ImageField(required=False)
-
     class Meta:
         model = User
         fields = ("username", "email", "password1", "password2",
@@ -49,7 +46,7 @@ class StudentProfileEditForm(forms.ModelForm):
     class Meta:
         model = StudentProfile
         fields = [
-            'image', 'roll_no', 'dob', 'height_cm', 'weight_kg', 
+            'roll_no', 'dob', 'height_cm', 'weight_kg', 
             'personal_contact', 'parent_contact', 'address', 'class_name', 'section'
         ]
         widgets = {

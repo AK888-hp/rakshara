@@ -33,10 +33,7 @@ def student_register(request):
             profile.weight_kg = form.cleaned_data.get('weight_kg')
             profile.personal_contact = form.cleaned_data.get('personal_contact')
             
-            # --- Save the new image field ---
-            if 'image' in request.FILES:
-                profile.image = request.FILES['image']
-            
+        
             parent_email = request.POST.get('parent_email')
             if parent_email:
                 profile.parent_contact = parent_email.strip()
@@ -321,7 +318,6 @@ def edit_student_profile(request):
     
     if request.method == 'POST':
         # Pass instance=profile to update the existing profile
-        form = StudentProfileEditForm(request.POST, request.FILES, instance=profile)
         if form.is_valid():
             form.save()
             messages.success(request, 'Your profile has been updated successfully!')

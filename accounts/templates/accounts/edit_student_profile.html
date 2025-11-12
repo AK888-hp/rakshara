@@ -10,7 +10,7 @@
         <h1 class="auth-title">{% trans "Edit Profile" %}</h1>
         <p class="auth-subtitle">{% trans "Update your personal and academic information." %}</p>
 
-        <form method="post" class="auth-form needs-loader" enctype="multipart/form-data">
+        <form method="post" class="auth-form needs-loader">
             {% csrf_token %}
             
             <div class="form-grid">
@@ -75,16 +75,7 @@
                     {{ form.address.errors }}
                 </div>
 
-                <div class="form-group span-2">
-                    <label for="{{ form.image.id_for_label }}" class="form-label">{{ form.image.label }}</label>
-                    {% if form.image.value %}
-                        <p>{% trans "Currently" %}: <a href="{{ form.image.value.url }}">{{ form.image.value.name }}</a></p>
-                    {% endif %}
-                    {{ form.image }}
-                    {{ form.image.errors }}
-                </div>
-
-            </div> <div class="form-actions">
+                </div> <div class="form-actions">
                 <a href="{% url 'student_profile' %}" class="btn btn-outline">{% trans "Cancel" %}</a>
                 <button type="submit" class="btn btn-success">{% trans "Save Changes" %}</button>
             </div>

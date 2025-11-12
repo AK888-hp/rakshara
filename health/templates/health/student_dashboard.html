@@ -11,11 +11,7 @@
     </div>
     
     <a href="{% url 'student_profile' %}" class="profile-btn" title="{% trans 'View Profile' %}">
-        {% if profile.image %}
-            <img src="{{ profile.image.url }}" alt="{% trans 'Profile Picture' %}">
-        {% else %}
-            <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
-        {% endif %}
+        <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
     </a>
 </div>
 
@@ -113,7 +109,6 @@
     }
     .dashboard-header h2 { font-size: 2rem; margin-bottom: 0.25rem; }
     
-    /* UPDATED: Profile Button Style */
     .profile-btn {
         display: grid;
         place-items: center;
@@ -125,8 +120,8 @@
         color: var(--color-text-muted);
         transition: all var(--transition-speed);
         flex-shrink: 0;
-        overflow: hidden; /* <-- NEW: This clips the image */
-        padding: 0; /* <-- NEW: Ensure no padding */
+        overflow: hidden;
+        padding: 0;
     }
     .profile-btn:hover {
         background-color: var(--color-primary-light);
@@ -134,13 +129,7 @@
         text-decoration: none;
         box-shadow: var(--shadow-sm);
     }
-    /* NEW: Style for the image inside the button */
-    .profile-btn img {
-        width: 100%;
-        height: 100%;
-        object-fit: cover; /* This makes the image fill the circle */
-    }
-    /* END NEW STYLES */
+    /* img style removed */
     
     .summary-grid {
         display: grid;
@@ -264,7 +253,6 @@ document.addEventListener("DOMContentLoaded", () => {
     const spo2Data = {{ spo2_data|safe }};
     const tempData = {{ temp_data|safe }};
     
-    // Get theme colors from CSS variables
     const dangerColor = getComputedStyle(document.documentElement).getPropertyValue('--color-danger').trim();
     const successColor = getComputedStyle(document.documentElement).getPropertyValue('--color-success').trim();
     const primaryColor = getComputedStyle(document.documentElement).getPropertyValue('--color-primary').trim();
